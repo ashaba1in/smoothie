@@ -224,7 +224,9 @@ def main():
         config.model.encoder_link,
         enc_normalizer=enc_normalizer,
         is_change_sp_tokens=True,
-        emb=config.emb
+        emb=config.emb,
+        embeddings_path=config.embeddings_path,
+        emb_statistics_agg_type=config.emb_statistics_agg_type,
     ).eval()
     tokenizer = AutoTokenizer.from_pretrained(encoder.encoder_link)
 

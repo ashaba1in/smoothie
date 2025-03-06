@@ -176,7 +176,20 @@ def parse():
     parser.add_argument("--swap_cfg_coef", type=float, default=0.)
     parser.add_argument("--scheduler", type=str, default='sd')
     parser.add_argument("--coef_d", type=str, default=9)
-    parser.add_argument("--emb", type=bool, default=False)
+    parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
+    parser.add_argument(
+        "--emb_statistics_agg_type", type=str, default=None, choices=["features", "total"],
+        help='Sets dimensions for aggregation of embeddings values'
+    )
+    parser.add_argument(
+        "--dual_space", type=bool, default=False, help='If set, train model in the embedding dual space'
+    )
+    parser.add_argument(
+        "--embeddings_path", type=str, default=None, help='Path to file with embedding matrix'
+    )
+    parser.add_argument(
+        "--cluster_diffusion", type=bool, default=False, help='If set, use clusterization-like noising'
+    )
     parser.add_argument(
         "--encoder_name", type=str, default='bert-base-cased',
         choices=[

@@ -1,7 +1,5 @@
 import os
-import sys
 import torch
-import argparse
 import torch.distributed as dist
 
 from diffusion_holder import DiffusionRunner

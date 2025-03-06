@@ -4,7 +4,10 @@ from transformers import AutoModel, T5EncoderModel, AutoTokenizer
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, encoder_link, enc_normalizer, is_change_sp_tokens=True, emb=False):
+    def __init__(
+            self, encoder_link, enc_normalizer, is_change_sp_tokens=True,
+            emb=False, embeddings_path=None, emb_statistics_agg_type='features'
+    ):
         super().__init__()
         self.emb = emb
         self.encoder_link = encoder_link
@@ -22,16 +25,28 @@ class Encoder(torch.nn.Module):
             self.embeddings = self.encoder.embed_tokens.weight.data.cpu()
         else:
             raise Exception("Unknown encoder name. Add encoder to ./model/encoder.py")
-        
+        if embeddings_path is not None:
+            weights = torch.load(embeddings_path, map_location='cpu')
+            if isinstance(weights, dict):
+                self.embeddings = weights['eig_vec'] * weights['eig_val']**0.5
+            else:
+                self.embeddings = weights
+
         if self.emb:
             if 'bert' in encoder_link:
                 used_ids, unused_ids = self.get_used_ids(encoder_link=encoder_link)
             else:
                 used_ids = torch.arange(start=0, end=self.embeddings.shape[0], device=self.embeddings.device)
                 unused_ids = []
-        
-            self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=0, keepdim=True)
-            self.emb_std = torch.std(self.embeddings[used_ids, :], dim=0, keepdim=True)
+            if emb_statistics_agg_type == 'features':
+                dim = 0
+            elif emb_statistics_agg_type == 'total':
+                dim = (0, 1)
+            else:
+                raise Exception("Unknown embedding aggregation type, support only ['features', 'total']")
+
+            self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=dim, keepdim=True)
+            self.emb_std = torch.std(self.embeddings[used_ids, :], dim=dim, keepdim=True)
             self.embeddings[unused_ids, :] *= torch.inf
             self.embeddings = self.embeddings.cuda()
 

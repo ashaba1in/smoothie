@@ -83,8 +83,7 @@ def compute_mean_std(
     std = torch.sqrt(sqr_sum_ / num - mean ** 2)
 
     if torch.isnan(mean).any() or torch.isnan(std).any():
-        raise Exception("nan in statistics")
-    
+        raise Exception("Nan in statistics")
 
     folder_path = ''.join([config.data.base_path, '/', config.data.datasets.datasets_list[0], "/statistics"])
     os.makedirs(folder_path, exist_ok=True)
@@ -101,7 +100,9 @@ if __name__ == "__main__":
         encoder_link=config.model.encoder_link,
         enc_normalizer=None,
         is_change_sp_tokens=False,
-        emb=args.emb
+        emb=args.emb,
+        embeddings_path=config.embeddings_path,
+        emb_statistics_agg_type=config.emb_statistics_agg_type,
     ).eval()
     encoder = torch.nn.DataParallel(encoder).cuda()
 

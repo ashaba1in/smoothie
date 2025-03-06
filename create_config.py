@@ -1,6 +1,6 @@
 import ml_collections
 import os
-from transformers import PretrainedConfig, AutoConfig
+from transformers import AutoConfig
 
 
 def create_config(args):
@@ -84,16 +84,16 @@ def create_config(args):
     config.use_self_cond = True
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
     config.emb = args.emb
+    config.emb_statistics_agg_type = args.emb_statistics_agg_type
+    config.embeddings_path = args.embeddings_path
+    config.dual_space = args.dual_space
+    config.cluster_diffusion = args.cluster_diffusion
 
     decoder = config.decoder = create_decoder_config() 
     decoder.dataset = data.datasets.datasets_list[0]
     decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
     decoder.name += decoder.suffix
     decoder.is_conditional = config.is_conditional
-    if decoder.is_conditional:
-        decoder.name += "-conditional"
-    if config.emb:
-        decoder.name += "-emb"
     decoder.decoder_path = f"{data.base_path}/{data.datasets.datasets_list[0]}/{decoder.name}.pth"
     if decoder.max_sequence_len < data.max_sequence_len:
         raise Exception("Decoder max_sequence_len is less than required")
