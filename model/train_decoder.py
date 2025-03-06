@@ -131,12 +131,7 @@ def save_checkpoint(model, config):
     os.makedirs(config.training.checkpoints_folder, exist_ok=True)
 
     model.eval()
-    torch.save(
-        {
-            "decoder": model.state_dict(),
-        },
-        config.decoder.decoder_path
-    )
+    torch.save({"decoder": model.state_dict()}, config.decoder.decoder_path)
     print(f"Save model to: {config.decoder.decoder_path}")
 
 

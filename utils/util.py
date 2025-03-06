@@ -186,4 +186,5 @@ def parse():
             "bart-base"
         ])
     parser.add_argument('--project_name', type=str, default='test')
+    parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     return parser.parse_args()
