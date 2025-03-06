@@ -106,9 +106,9 @@ def create_config(args):
     config.project_name = args.project_name
     config.timesteps = "linear"
     pref = "emb" if config.emb else "tencdm"
-    training.checkpoints_prefix = f"{pref}-{model.encoder_name_hash}-{training.batch_size}-{optim.lr}-{data.datasets.datasets_list[0]}-cfg={data.swap_cfg_coef}"
+    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
-    
+
     config.tracked_dataset = data.datasets.datasets_list[0]
     config.tracked_metric = data.datasets.metrics[config.tracked_dataset]["tracked_metric"]
     config.higher_better = True
