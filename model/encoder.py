@@ -34,16 +34,13 @@ class Encoder(torch.nn.Module):
             self.emb_std = torch.std(self.embeddings[used_ids, :], dim=0, keepdim=True)
             self.embeddings[unused_ids, :] *= torch.inf
             self.embeddings = self.embeddings.cuda()
-        
+
         self.enc_normalizer = enc_normalizer
         self.is_change_sp_tokens = is_change_sp_tokens
         self.tokenizer = AutoTokenizer.from_pretrained(self.encoder_link)
         self.register_buffer("zero_emb", torch.zeros((self.encoder.config.hidden_size)))
 
-    def forward(
-            self,
-            input_ids, attention_mask
-    ):
+    def forward(self, input_ids, attention_mask):
         if self.emb:
             return (self.embeddings[input_ids] - self.emb_mean.cuda()[None, :, :]) / self.emb_std.cuda()[None, :, :]
         
@@ -63,12 +60,11 @@ class Encoder(torch.nn.Module):
         
         return sequence_output
     
-    
     def _normalize_emb(self, x):
         return x / torch.norm(x) * np.sqrt(x.shape[-1])
 
-    def get_used_ids(self,
-                     encoder_link: str) -> tuple[list[int], list[int]]:
+    @staticmethod
+    def get_used_ids(encoder_link: str) -> tuple[list[int], list[int]]:
         """Function to get ids to filter unused ids of BERT"""
         vocab = AutoTokenizer.from_pretrained(encoder_link).vocab
         used_ids = []

@@ -590,9 +590,9 @@ class DiffusionRunner:
             batch=None,
             eps: float = 1e-5,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
-        mask = None  # X["input_mask"]
-        
-        # Noizing
+        mask = None
+
+        # Noising
         batch_size = clean_x.size(0)
 
         t = self.sample_time(batch_size, eps=eps)

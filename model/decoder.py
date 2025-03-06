@@ -9,9 +9,9 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.num_hidden_layers = decoder_config.num_hidden_layers
-        
+
         arch_config = deepcopy(diffusion_config)
-        arch_config.is_conditional = decoder_config.is_conditional
+        arch_config.is_decoder = decoder_config.is_conditional
         self.blocks = torch.nn.ModuleList(
             [BertBlock(arch_config) for _ in range(0, self.num_hidden_layers)]
         )
