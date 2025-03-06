@@ -32,7 +32,7 @@ from model.encoder import Encoder
 from model.enc_normalizer import EncNormalizer
 from model.decoder import Decoder
 
-from estimation_utils.util import gather_texts, compute_metric
+from estimation_utils.util import gather_texts
 from estimation_utils.metrics import compute_metric
 
 
@@ -40,7 +40,8 @@ class DiffusionRunner:
     def __init__(
             self,
             config: ConfigDict,
-            eval: bool = False
+            eval: bool = False,
+            run_wandb: bool = True
     ):
         self.config = config
 
@@ -117,9 +118,9 @@ class DiffusionRunner:
 
         # Checkpoint utils
         self.all_checkpoints = []
-        self.tracked_test_metric = dict() # step -- metric value
-        
-        if self.config.ddp and dist.get_rank() == 0:
+        self.tracked_test_metric = dict()  # step -- metric value
+
+        if self.config.ddp and dist.get_rank() == 0 and run_wandb:
             wandb.init(
                 project=self.config.project_name,
                 name=self.config.training.checkpoints_prefix,
@@ -145,14 +146,14 @@ class DiffusionRunner:
 
     def restore_parameters(self, device: Optional[torch.device] = None) -> None:
         prefix_folder = os.path.join(self.config.training.checkpoints_folder, self.config.training.checkpoints_prefix)
-        
+
         checkpoint_names = list(os.listdir(prefix_folder))
         checkpoint_names = [str(t).replace(".pth", "") for t in checkpoint_names]
         checkpoint_names = [int(t) for t in checkpoint_names if t.isdigit()]
 
         if not checkpoint_names:
             return False
-            
+
         name = self.config.training.checkpoint_name
         if not name:
             name = max(checkpoint_names)
@@ -454,7 +455,7 @@ class DiffusionRunner:
             })
 
         loss_dict, stat_dict = self.calc_loss(clean_x=trg_x, cond_x=src_x, batch=batch)
-        
+
         if self.step % self.config.training.accum_batch_steps == 0:
             stat_dict["grad_norm"] = self.optimizer_step(loss_dict['total_loss'])
             stat_dict["scale_factor"] = torch.Tensor([self.grad_scaler._scale])

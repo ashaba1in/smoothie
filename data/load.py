@@ -165,7 +165,7 @@ def download_rocstory(dataset_path):
         desc="Loading...",
         remove_columns=dt.column_names,
     )
-    dt = dt.train_test_split(test_size=10000, seed=0)
+    dt = dt.train_test_split(test_size=5000, seed=0)
     dt.save_to_disk(dataset_path)
 
 
@@ -174,9 +174,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", 
-            "wikipedia", 
-            "qqp", "xsum", "wiki_auto",
+            "rocstories", "wikipedia", "qqp", "xsum", "wiki_auto",
         ],
         required=True,
     )
@@ -184,7 +182,7 @@ if __name__ == "__main__":
         "--dataset_path", type=str, default=''.join([os.getcwd(), '/datasets/']),
         required=False,
     )
-    
+
     args = parser.parse_args()
 
     if args.dataset_name == "rocstories":

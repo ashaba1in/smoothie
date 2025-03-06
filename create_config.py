@@ -35,7 +35,7 @@ def create_config(args):
 
     validation = config.validation = ml_collections.ConfigDict()
     validation.batch_size = 1000
-    validation.num_gen_texts = 5000
+    validation.num_gen_texts = 1000
     validation.texts_path = f"{config.work_dir}/generated_texts"
     validation.cfg_coef = 0.
 
@@ -87,7 +87,7 @@ def create_config(args):
 
     decoder = config.decoder = create_decoder_config() 
     decoder.dataset = data.datasets.datasets_list[0]
-    decoder.name = f"decoder-{model.encoder_name_hash}-transformer"
+    decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
     decoder.name += decoder.suffix
     decoder.is_conditional = config.is_conditional
     if decoder.is_conditional:
