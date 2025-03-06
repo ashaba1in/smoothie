@@ -216,7 +216,7 @@ def train(config, encoder, decoder, tokenizer):
 
 def main():
     args = parse()
-    
+
     config = create_config(args)
     if not config.emb:
         enc_normalizer = EncNormalizer(
@@ -240,4 +240,5 @@ def main():
     train(config, encoder, decoder, tokenizer)
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -549,7 +549,7 @@ class DiffusionRunner:
             x_0_self_cond=x_0_self_cond
         )
         return x_0
-        
+
     def calc_score(
             self,
             model,
