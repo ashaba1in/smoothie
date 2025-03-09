@@ -89,7 +89,6 @@ def create_config(args):
     config.emb = args.emb
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
-    config.dual_space = args.dual_space
     config.cluster_diffusion = args.cluster_diffusion
 
     decoder = config.decoder = create_decoder_config()
@@ -110,10 +109,10 @@ def create_config(args):
     config.timesteps = "linear"
     pref = "emb" if config.emb else "tencdm"
     if config.embeddings_path is not None:
-        pref = "dual_emb"
+        pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'cluster_sd':
         pref = "cluster"
-    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')} "
+    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
 
     config.tracked_dataset = data.datasets.datasets_list[0]
