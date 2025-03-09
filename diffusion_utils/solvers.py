@@ -24,7 +24,9 @@ class EulerDiffEqSolver:
         """
         dt = (next_t - t).view(-1, 1, 1)
         noise = torch.randn_like(x_t)
-        drift, diffusion, score_output = self.dynamic.reverse_params(x_t, t, partial(self.score_fn, **kwargs), self.ode_sampling)
+        drift, diffusion, score_output = self.dynamic.reverse_params(
+            x_t, t, partial(self.score_fn, **kwargs), self.ode_sampling
+        )
         x_mean = x_t + drift * dt
         x = x_mean + diffusion.view(-1, 1, 1) * torch.sqrt(-dt) * noise
         return {

@@ -799,12 +799,19 @@ class DiffusionRunner:
             attention_mask=None,
     ) -> torch.Tensor:
         self.score_estimator.eval()
-        shape = (
-            batch_size,
-            self.config.data.max_sequence_len,
-            self.encoder.encoder.config.hidden_size
-        )
 
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            shape = (
+                batch_size,
+                self.config.data.max_sequence_len,
+                self.encoder.encoder.config.vocab_size
+            )
+        else:
+            shape = (
+                batch_size,
+                self.config.data.max_sequence_len,
+                self.encoder.encoder.config.hidden_size
+            )
         with torch.no_grad():
             x = self.dynamic.prior_sampling(shape).to(self.device)
             x_0_self_cond = torch.zeros_like(x, dtype=x.dtype)
