@@ -10,6 +10,10 @@ def create_scheduler(config):
         return CosineSD(config.dynamic.coef_d)
     elif config.dynamic.scheduler == 'sqrt':
         return Sqrt()
+    elif config.dynamic.scheduler == 'cluster_sd':
+        return ClusterCosineSD(
+            config.dynamic.coef_d, config.dynamic.delta, config.dynamic.sigma_min, config.dynamic.sigma_max
+        )
 
 
 class Scheduler(metaclass=ABCMeta):
@@ -78,4 +82,31 @@ class Sqrt(Scheduler):
         mu = torch.sqrt(alpha)
         std = torch.sqrt(1. - alpha)
         return torch.clip(mu, 0, 1), torch.clip(std, 0, 1)
-    
+
+
+class ClusterCosineSD(Scheduler):
+    def __init__(self, d=5, delta=0.25, sigma_min=0.1, sigma_max=20.0):
+        self.d = d
+        self.delta = delta
+        self.multiplier = (sigma_max / sigma_min - 1)
+        self.addendum = 1
+        self.t_thr = 0.995
+
+    def sigma_bar(self, t):
+        t = torch.clip(t, 1 - self.t_thr, self.t_thr)
+        return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) + self.addendum
+
+    def beta_t(self, t):
+        t = torch.clip(t, 1 - self.t_thr, self.t_thr)
+        beta_t = 2 * self.multiplier * self.d / (
+                (self.d ** 2 * (1 - t) + t) *
+                torch.sqrt(t * (1 - t)) *
+                (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
+        )
+        return beta_t
+
+    def params(self, t):
+        t = t[:, None, None]
+        alpha_t = 1 / self.sigma_bar(t)**4
+        std_t = self.delta * torch.sqrt(1 - alpha_t)
+        return torch.sqrt(alpha_t), std_t

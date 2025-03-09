@@ -7,7 +7,7 @@ def create_config(args):
     config = ml_collections.ConfigDict()
 
     config.work_dir = os.getcwd()
-    
+
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
     training.training_iters = 200_000 * training.accum_batch_steps
@@ -18,7 +18,7 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
-    
+
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.
     optim.linear_warmup = 5000 * training.accum_batch_steps
@@ -47,6 +47,9 @@ def create_config(args):
     dynamic.beta_max = 20
     dynamic.ode_sampling = False
     dynamic.coef_d = args.coef_d
+    dynamic.delta = args.delta
+    dynamic.sigma_min = args.sigma_min
+    dynamic.sigma_max = args.sigma_max
 
     model = config.model = ml_collections.ConfigDict()
     model.ema_rate = 0.9999
@@ -89,7 +92,7 @@ def create_config(args):
     config.dual_space = args.dual_space
     config.cluster_diffusion = args.cluster_diffusion
 
-    decoder = config.decoder = create_decoder_config() 
+    decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]
     decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
     decoder.name += decoder.suffix
@@ -106,7 +109,11 @@ def create_config(args):
     config.project_name = args.project_name
     config.timesteps = "linear"
     pref = "emb" if config.emb else "tencdm"
-    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{os.environ.get('SLURM_JOB_ID')}"
+    if config.embeddings_path is not None:
+        pref = "dual_emb"
+    if dynamic.scheduler == 'cluster_sd':
+        pref = "cluster"
+    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')} "
     config.eval = False
 
     config.tracked_dataset = data.datasets.datasets_list[0]
@@ -133,7 +140,7 @@ def create_datasets_config(args):
         "rocstories": {"metrics": ["mauve", "div", "ppl"],
                        "tracked_metric": "mauve"},
         "wikipedia": {"metrics": ["mauve", "div", "ppl"],
-                       "tracked_metric": "mauve"},
+                      "tracked_metric": "mauve"},
         "qqp": {
             "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
             "tracked_metric": "bert-score",
@@ -159,7 +166,7 @@ def create_decoder_config():
     config.betas = (0.9, 0.98)
     config.weight_decay = 0.001
     config.batch_size = 64
-    config.epochs = 1
+    config.epochs = 2
     config.max_norm = 1.0
     config.is_conditional = False
     config.dataset = ""
@@ -192,5 +199,3 @@ def get_context_len(dataset_name):
         "wiki_auto": 100,
     }
     return data[dataset_name]
-
-    

@@ -163,6 +163,26 @@ def get_stat(z, mask):
     return stat_dict
 
 
+@torch.no_grad()
+def convert_to_simplex(input_embeddings, sigma_0, embeddings):
+    # if input_embeddings is None:
+    #     input_shape = (*token_ids.shape, -1)
+    #     input_embeds = embeddings[token_ids.view(-1)]
+    # else:
+    input_shape = (*input_embeddings.shape[:-1], -1)
+    input_embeds = input_embeddings.view(-1, input_embeddings.shape[-1])
+
+    pairwise_dist = (
+        (input_embeds ** 2).sum(-1).unsqueeze(1)
+        - 2 * input_embeds @ embeddings.T
+        + (embeddings ** 2).sum(-1).unsqueeze(0)
+    )
+
+    result = -pairwise_dist / (2 * sigma_0 ** 2)
+    return result.view(*input_shape)
+
+
+
 def parse():
     parser = argparse.ArgumentParser(description="Dataset arguments")
     parser.add_argument(
@@ -175,14 +195,14 @@ def parse():
     parser.add_argument("--local-rank", type=int, default=None)
     parser.add_argument("--swap_cfg_coef", type=float, default=0.)
     parser.add_argument("--scheduler", type=str, default='sd')
-    parser.add_argument("--coef_d", type=str, default=9)
+    parser.add_argument("--coef_d", type=float, default=9)
+    parser.add_argument("--delta", type=float, default=0.25)
+    parser.add_argument("--sigma_min", type=float, default=0.1)
+    parser.add_argument("--sigma_max", type=float, default=20.0)
     parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
     parser.add_argument(
-        "--emb_statistics_agg_type", type=str, default=None, choices=["features", "total"],
+        "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],
         help='Sets dimensions for aggregation of embeddings values'
-    )
-    parser.add_argument(
-        "--dual_space", type=bool, default=False, help='If set, train model in the embedding dual space'
     )
     parser.add_argument(
         "--embeddings_path", type=str, default=None, help='Path to file with embedding matrix'

@@ -23,7 +23,7 @@ from diffusion_utils.dynamic import DynamicSDE
 from diffusion_utils.solvers import create_solver
 
 from utils.ema_model import ExponentialMovingAverage
-from utils.util import mse_loss, get_stat, reduce_tensor, set_seed
+from utils.util import mse_loss, get_stat, reduce_tensor, set_seed, convert_to_simplex
 from data.dataset import DatasetDDP, get_dataset_iter
 from data.util import tokenize, BatchEncoding
 
@@ -103,7 +103,7 @@ class DiffusionRunner:
             score_fn=partial(self.calc_score, model=self.ddp_score_estimator),
             ode_sampling=config.training.ode_sampling
         )
-        
+
         self.train_datasets_iter = DatasetDDP(
             split="train",
             config=config,
@@ -127,7 +127,6 @@ class DiffusionRunner:
                 project=self.config.project_name,
                 name=self.config.training.checkpoints_prefix,
                 config=dict(self.config),
-                mode="online"
             )
         
         if eval:
@@ -568,16 +567,32 @@ class DiffusionRunner:
         score = (-x_t + sqrt(alpha_t) * x_0) / std**2
         """
         params = self.dynamic.marginal_params(t)
-        x_0 = model(
-            x_t=x_t, time_t=t, cond=cond,
-            attention_mask=attention_mask, cond_mask=cond_mask,
-            x_0_self_cond=x_0_self_cond
-        )
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            embeddings = self.encoder.embeddings
+            model_input = torch.softmax(x_t, dim=-1) @ embeddings
+            pred_embeddings = model(
+                x_t=model_input, time_t=t, cond=cond,
+                attention_mask=attention_mask, cond_mask=cond_mask,
+                x_0_self_cond=x_0_self_cond
+            )
+            x_0 = convert_to_simplex(
+                input_embeddings=pred_embeddings,
+                sigma_0=self.config.dynamic.sigma_min,
+                embeddings=embeddings,
+            )
+        else:
+            x_0 = model(
+                x_t=x_t, time_t=t, cond=cond,
+                attention_mask=attention_mask, cond_mask=cond_mask,
+                x_0_self_cond=x_0_self_cond
+            )
         
         if not model.training and self.config.validation.cfg_coef and self.config.is_conditional:
-            x_0_null = self.predict_x_0_unconditional(model, x_t=x_t, t=t, attention_mask=attention_mask, x_0_self_cond=x_0_self_cond)
+            x_0_null = self.predict_x_0_unconditional(
+                model, x_t=x_t, t=t, attention_mask=attention_mask, x_0_self_cond=x_0_self_cond
+            )
             x_0 = x_0 + self.config.validation.cfg_coef * (x_0 - x_0_null)
-        
+
         eps_theta = (x_t - params["mu"] * x_0) / params["std"]
         score = -eps_theta / params["std"]
         return {
@@ -595,6 +610,15 @@ class DiffusionRunner:
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         mask = None
 
+        target = clean_x.clone()
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            embeddings = self.encoder.embeddings
+            clean_x = convert_to_simplex(
+                input_embeddings=clean_x,
+                sigma_0=self.config.dynamic.sigma_min,
+                embeddings=embeddings,
+            )
+
         # Noising
         batch_size = clean_x.size(0)
 
@@ -603,32 +627,40 @@ class DiffusionRunner:
         x_t, noise = marg_forward['x_t'], marg_forward['noise']
 
         # self-cond estimate
-        x_0_self_cond = torch.zeros_like(clean_x, dtype=clean_x.dtype)
+        x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
         if self.config.use_self_cond and random.random() > 0.5:
             with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
                 t_next = t
                 params_next = self.dynamic.marginal_params(t_next)
                 x_t_next = params_next["mu"] * clean_x + params_next["std"] * noise
 
+                if self.config.dynamic.scheduler == 'cluster_sd':
+                    model_input = torch.softmax(x_t_next, dim=-1) @ self.encoder.embeddings
+                else:
+                    model_input = x_t_next
                 with torch.no_grad():
                     x_0_self_cond = self.ddp_score_estimator(
-                        x_t=x_t_next, time_t=t_next, cond=cond_x,
+                        x_t=model_input, time_t=t_next, cond=cond_x,
                         attention_mask=mask, 
                         cond_mask=batch.get("attention_mask_src"),
                         x_0_self_cond=x_0_self_cond
                     ).detach()
 
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+        else:
+            model_input = x_t
         # model prediction
         with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
             x_0 = self.ddp_score_estimator(
-                x_t=x_t, time_t=t, cond=cond_x,
+                x_t=model_input, time_t=t, cond=cond_x,
                 attention_mask=mask, 
                 cond_mask=batch.get("attention_mask_src"),
                 x_0_self_cond=x_0_self_cond
             )
 
         # MSE losses
-        loss_x_0 = mse_loss(clean_x, x_0, mask)
+        loss_x_0 = mse_loss(target, x_0, mask)
 
         loss_dict = {
             'total_loss': loss_x_0,
@@ -637,18 +669,23 @@ class DiffusionRunner:
 
         with torch.no_grad():
             stat_dict = {}
-            clean_x_dict = get_stat(clean_x, mask)
-            for key in clean_x_dict:
-                stat_dict[f"clean_x_{key}"] = clean_x_dict[key]
+            if self.config.dynamic.scheduler == 'cluster_sd':
+                D_0_dict = get_stat(clean_x, mask)
+                for key in D_0_dict:
+                    stat_dict[f"D_0_{key}"] = D_0_dict[key]
+
+            target_dict = get_stat(target, mask)
+            for key in target_dict:
+                stat_dict[f"clean_x_{key}"] = target_dict[key]
     
             x_0_dict = get_stat(x_0.detach(), mask)
             for key in x_0_dict:
                 stat_dict[f"x_0_{key}"] = x_0_dict[key]
     
             mask = batch["attention_mask_trg"]
-            clean_x_dict_SPT = get_stat(clean_x, mask)
-            for key in clean_x_dict_SPT:
-                stat_dict[f"clean_x_woSPT_{key}"] = clean_x_dict_SPT[key]
+            target_dict_SPT = get_stat(target, mask)
+            for key in target_dict_SPT:
+                stat_dict[f"clean_x_woSPT_{key}"] = target_dict_SPT[key]
     
             x_0_dict_SPT = get_stat(x_0, mask)
             for key in x_0_dict_SPT:

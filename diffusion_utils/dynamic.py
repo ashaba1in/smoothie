@@ -34,13 +34,7 @@ class DynamicBase(metaclass=ABCMeta):
 
 class DynamicSDE(DynamicBase):
     def __init__(self, config):
-        """Construct a Variance Preserving SDE.
-
-        Args:
-          beta_min: value of beta(0)
-          beta_max: value of beta(1)
-          N: number of discretization steps
-        """
+        """Construct a Variance Preserving SDE."""
 
         self.N = config.dynamic.N
         self.scheduler = create_scheduler(config)
