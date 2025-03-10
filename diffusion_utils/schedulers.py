@@ -90,7 +90,7 @@ class ClusterCosineSD(Scheduler):
         self.delta = delta
         self.multiplier = (sigma_max / sigma_min - 1)
         self.addendum = 1
-        self.t_thr = 0.995
+        self.t_thr = 0.9995
 
     def sigma_bar(self, t):
         t = torch.clip(t, 1 - self.t_thr, self.t_thr)

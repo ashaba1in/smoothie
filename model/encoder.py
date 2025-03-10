@@ -1,3 +1,4 @@
+
 import torch
 import numpy as np
 from transformers import AutoModel, T5EncoderModel, AutoTokenizer
@@ -47,7 +48,8 @@ class Encoder(torch.nn.Module):
 
             self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=dim, keepdim=True)
             self.emb_std = torch.std(self.embeddings[used_ids, :], dim=dim, keepdim=True)
-            self.embeddings[unused_ids, :] *= torch.inf
+            # self.embeddings[unused_ids, :] *= torch.inf
+            self.embeddings = (self.embeddings - self.emb_mean) / self.emb_std
             self.embeddings = self.embeddings.cuda()
 
         self.enc_normalizer = enc_normalizer
@@ -57,7 +59,8 @@ class Encoder(torch.nn.Module):
 
     def forward(self, input_ids, attention_mask):
         if self.emb:
-            return (self.embeddings[input_ids] - self.emb_mean.cuda()[None, :, :]) / self.emb_std.cuda()[None, :, :]
+            return self.embeddings[input_ids]
+            # return (self.embeddings[input_ids] - self.emb_mean.cuda()[None, :, :]) / self.emb_std.cuda()[None, :, :]
         
         sequence_output = self.encoder(
             input_ids=input_ids, attention_mask=attention_mask
