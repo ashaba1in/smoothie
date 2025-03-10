@@ -96,7 +96,7 @@ def compute_diversity(all_texts_list):
         for tokens in token_list:
             ngram_sets[n].update(ngrams(tokens, n))
             ngram_counts[n] += len(list(ngrams(tokens, n)))
-        metrics[f'{n}gram_repitition'] = (1 - len(ngram_sets[n])/ngram_counts[n])
+        metrics[f'{n}gram_repitition'] = 0 if ngram_counts[n] == 0 else (1 - len(ngram_sets[n]) / ngram_counts[n])
     diversity = 1
     for val in metrics.values():
         diversity *= (1 - val)
