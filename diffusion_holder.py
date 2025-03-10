@@ -571,23 +571,24 @@ class DiffusionRunner:
             # x_t is [bs, seq_len, V]
             embeddings = self.encoder.embeddings
             model_input = torch.softmax(x_t, dim=-1) @ embeddings
-            pred_embeddings = model(
+            model_prediction = model(
                 x_t=model_input, time_t=t, cond=cond,
                 attention_mask=attention_mask, cond_mask=cond_mask,
                 x_0_self_cond=x_0_self_cond
             )
             x_0 = convert_to_simplex(
-                input_embeddings=pred_embeddings,
+                input_embeddings=model_prediction,
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=embeddings,
             )
         else:
             # x_t is [bs, seq_len, hidden_size]
-            x_0 = model(
+            model_prediction = model(
                 x_t=x_t, time_t=t, cond=cond,
                 attention_mask=attention_mask, cond_mask=cond_mask,
                 x_0_self_cond=x_0_self_cond
             )
+            x_0 = model_prediction
         
         if not model.training and self.config.validation.cfg_coef and self.config.is_conditional:
             x_0_null = self.predict_x_0_unconditional(
@@ -600,7 +601,8 @@ class DiffusionRunner:
         return {
             "score": score,
             "x_0": x_0,
-            "eps_theta": eps_theta
+            "eps_theta": eps_theta,
+            "latent_pred": model_prediction,
         }
 
     def calc_loss(
@@ -843,8 +845,8 @@ class DiffusionRunner:
                 )
 
                 x, x_mean = output["x"], output["x_mean"]
-                x_0_self_cond = output["x_0"]
-                
+                x_0_self_cond = output["latent_pred"]
+
             pred_embeddings = x_mean
 
         return pred_embeddings
