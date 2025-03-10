@@ -534,7 +534,7 @@ class DiffusionRunner:
         x_0_self_cond = torch.zeros_like(target)
         per_t_losses = []
         mean_id_probs_t = []
-        ts = torch.arange(0, self.dynamic.T, self.dynamic.N)
+        ts = torch.linspace(0, self.dynamic.T, self.dynamic.N)
         for t in ts:
             timesteps = torch.empty(size=(clean_x.shape[0],), device=clean_x.device).fill_(t)
             marg_forward = self.dynamic.marginal(clean_x, timesteps, noise=noise)
