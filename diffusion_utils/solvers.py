@@ -33,4 +33,5 @@ class EulerDiffEqSolver:
             "x": x,
             "x_mean": x_mean,
             "x_0": score_output["x_0"],
+            "latent_pred": score_output["latent_pred"]
         }
