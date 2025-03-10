@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import ml_collections
 import torch.distributed as dist
+from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 from ml_collections import ConfigDict
 from typing import Optional, Union, Dict, Tuple
@@ -515,6 +516,68 @@ class DiffusionRunner:
             valid_loss[k] = v / valid_count
         for k, v in valid_loss.items():
             self.log_metric(k, 'valid_loader', v)
+
+        # --------- Eval per timestep metrics ------------
+
+        clean_x = self.encoder(**{
+            "input_ids": batch["input_ids_trg"],
+            "attention_mask": batch["attention_mask_trg"]
+        })
+        target = clean_x.clone()
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            clean_x = convert_to_simplex(
+                input_embeddings=clean_x,
+                sigma_0=self.config.dynamic.sigma_min,
+                embeddings=self.encoder.embeddings,
+            )
+        noise = torch.randn_like(clean_x)
+        x_0_self_cond = torch.zeros_like(target)
+        per_t_losses = []
+        mean_id_probs_t = []
+        ts = torch.arange(0, self.dynamic.T, self.dynamic.N // 100)
+        for t in ts:
+            timesteps = torch.empty(size=(clean_x.shape[0],), device=clean_x.device).fill_(t)
+            marg_forward = self.dynamic.marginal(clean_x, timesteps, noise=noise)
+            x_t = marg_forward['x_t']
+
+            if self.config.dynamic.scheduler == 'cluster_sd':
+                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+            else:
+                model_input = x_t
+            # model prediction
+            with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+                x_0 = self.ddp_score_estimator(
+                    x_t=model_input, time_t=timesteps, x_0_self_cond=x_0_self_cond
+                )
+
+            # MSE losses
+            loss = mse_loss(target, x_0, mask=None)
+
+            per_t_losses.append(loss.item())
+            if self.config.dynamic.scheduler == 'cluster_sd':
+                probs_t = torch.softmax(x_t, dim=-1)
+                id_probs_t = probs_t.gather(2, batch["input_ids_trg"].unsqueeze(-1))
+                mean_id_probs_t.append(id_probs_t.mean().item())
+
+        dir_path = f'plots/{self.config.training.checkpoints_prefix}'
+        os.makedirs(dir_path, exist_ok=True)
+        fig = plt.figure(figsize=(8, 4))
+        plt.subplot(1, 2, 1)
+        plt.plot(ts, per_t_losses)
+        plt.xlabel('timestep')
+        plt.title('Reconstruction loss')
+        plt.grid()
+
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            plt.subplot(1, 2, 2)
+            plt.plot(ts, mean_id_probs_t)
+            plt.xlabel('timestep')
+            plt.title('Mean id_prob$_t$')
+            plt.yscale('log')
+            plt.axhline(1 / len(self.tokenizer), c='r')
+            plt.grid()
+
+        fig.savefig(f'{dir_path}/per_t_loss_{self.step}.png', dpi=fig.dpi)
 
         self.switch_back_from_ema()
         self.ddp_score_estimator.train(prev_mode)

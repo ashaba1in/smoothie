@@ -46,13 +46,14 @@ class DynamicSDE(DynamicBase):
             "std": std
         }
 
-    def marginal(self, x_0: Tensor, t: Tensor) -> Dict[str, Tensor]:
+    def marginal(self, x_0: Tensor, t: Tensor, noise=None) -> Dict[str, Tensor]:
         """
         Calculate marginal q(x_t|x_0)'s mean and std
         """
         params = self.marginal_params(t)
         mu, std = params["mu"], params["std"]
-        noise = torch.randn_like(x_0)
+        if noise is None:
+            noise = torch.randn_like(x_0)
         x_t = x_0 * mu + noise * std
         score = -noise / params["std"]
         return {

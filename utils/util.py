@@ -110,7 +110,7 @@ def bert_acc(targets, outputs, mask):
     return torch.sum(mask * (targets == pred_tokens)) / torch.sum(mask)
 
 
-def mse_loss(inputs, targets, mask):
+def mse_loss(inputs, targets, mask=None):
     if mask is None:
         mask = torch.ones(
             (targets.shape[0], targets.shape[1]),
