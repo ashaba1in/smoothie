@@ -847,7 +847,7 @@ class DiffusionRunner:
                 x, x_mean = output["x"], output["x_mean"]
                 x_0_self_cond = output["latent_pred"]
 
-            pred_embeddings = x_mean
+            pred_embeddings = output["latent_pred"]
 
         return pred_embeddings
 
