@@ -568,6 +568,7 @@ class DiffusionRunner:
         """
         params = self.dynamic.marginal_params(t)
         if self.config.dynamic.scheduler == 'cluster_sd':
+            # x_t is [bs, seq_len, V]
             embeddings = self.encoder.embeddings
             model_input = torch.softmax(x_t, dim=-1) @ embeddings
             pred_embeddings = model(
@@ -581,6 +582,7 @@ class DiffusionRunner:
                 embeddings=embeddings,
             )
         else:
+            # x_t is [bs, seq_len, hidden_size]
             x_0 = model(
                 x_t=x_t, time_t=t, cond=cond,
                 attention_mask=attention_mask, cond_mask=cond_mask,
@@ -814,7 +816,9 @@ class DiffusionRunner:
             )
         with torch.no_grad():
             x = self.dynamic.prior_sampling(shape).to(self.device)
-            x_0_self_cond = torch.zeros_like(x, dtype=x.dtype)
+            x_0_self_cond = torch.zeros(
+                *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
+            )
             eps_t = 0.01
 
             if self.config.timesteps == "linear":
