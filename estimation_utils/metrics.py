@@ -29,7 +29,7 @@ def compute_metric(metric_name, predictions, references, **kwargs):
         return compute_ppl(predictions=predictions)
     else:
         raise Exception(f"Unknown metric: {metric_name}")
-    
+
 
 def filter_empty_texts(predictions, references):
     pred_list = []
@@ -45,12 +45,14 @@ def compute_ppl(predictions, model_id='EleutherAI/gpt-neo-1.3B'):
     torch.cuda.empty_cache()
 
     predictions = [p for p in predictions if p]
+    if len(predictions) == 0:
+        return 0
 
     perplexity = load("perplexity", module_type="metric", model_id=model_id)
     ppl_list = perplexity.compute(
-        predictions=predictions, 
-        model_id=model_id, 
-        device='cuda', 
+        predictions=predictions,
+        model_id=model_id,
+        device='cuda',
         add_start_token=True,
     )["perplexities"]
     ppl_list = np.sort(ppl_list)
@@ -61,12 +63,14 @@ def compute_ppl(predictions, model_id='EleutherAI/gpt-neo-1.3B'):
 
 
 def compute_mauve(predictions, references, model_id='gpt2-large'):
-    torch.cuda.empty_cache() 
+    torch.cuda.empty_cache()
 
     mauve = load("mauve")
     assert len(predictions) == len(references)
 
     predictions, references = filter_empty_texts(predictions, references)
+    if len(predictions) == 0:
+        return 0
 
     results = mauve.compute(
         predictions=predictions, references=references,
@@ -119,7 +123,7 @@ def compute_memorization(all_texts_list, human_references, n=4):
 
 
 def compute_rouge(predictions, references):
-    torch.cuda.empty_cache() 
+    torch.cuda.empty_cache()
 
     rouge = load('rouge')
     result = rouge.compute(predictions=predictions, references=references)
