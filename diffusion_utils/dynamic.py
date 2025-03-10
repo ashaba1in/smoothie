@@ -36,6 +36,7 @@ class DynamicSDE(DynamicBase):
     def __init__(self, config):
         """Construct a Variance Preserving SDE."""
 
+        self.config = config
         self.N = config.dynamic.N
         self.scheduler = create_scheduler(config)
 
@@ -76,3 +77,9 @@ class DynamicSDE(DynamicBase):
             drift = drift_sde - beta_t[:, None, None] * score_output["score"]
             diffusion = diffuson_sde
         return drift, diffusion, score_output
+
+    def prior_sampling(self, shape) -> Tensor:
+        if self.config.dynamic.scheduler == 'cluster_sd':
+            return self.config.dynamic.delta * torch.randn(*shape)
+        else:
+            return torch.randn(*shape)
