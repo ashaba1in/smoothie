@@ -69,6 +69,7 @@ def compute_mauve(predictions, references, model_id='gpt2-large'):
     assert len(predictions) == len(references)
 
     predictions, references = filter_empty_texts(predictions, references)
+    print('Len predictions for MAUVE:', len(predictions))
     if len(predictions) == 0:
         return 0
 

@@ -10,7 +10,7 @@ def create_config(args):
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
-    training.training_iters = 200_000 * training.accum_batch_steps
+    training.training_iters = 500_000 * training.accum_batch_steps
     training.training_iters = training.training_iters
     training.checkpoint_freq = 25_000 * training.accum_batch_steps
     training.eval_freq = 25_000 * training.accum_batch_steps
@@ -34,7 +34,7 @@ def create_config(args):
     loss.ce_coef = 0.
 
     validation = config.validation = ml_collections.ConfigDict()
-    validation.batch_size = 1000
+    validation.batch_size = 100
     validation.num_gen_texts = 1000
     validation.texts_path = f"{config.work_dir}/generated_texts"
     validation.cfg_coef = 0.
@@ -111,7 +111,7 @@ def create_config(args):
     if config.embeddings_path is not None:
         pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'cluster_sd':
-        pref = "cluster"
+        pref = f"cluster_min{dynamic.sigma_min}_max{dynamic.sigma_max}"
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
 

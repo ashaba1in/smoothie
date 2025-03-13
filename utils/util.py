@@ -197,8 +197,8 @@ def parse():
     parser.add_argument("--scheduler", type=str, default='sd')
     parser.add_argument("--coef_d", type=float, default=9)
     parser.add_argument("--delta", type=float, default=0.25)
-    parser.add_argument("--sigma_min", type=float, default=0.1)
-    parser.add_argument("--sigma_max", type=float, default=20.0)
+    parser.add_argument("--sigma_min", type=float, default=5.0)
+    parser.add_argument("--sigma_max", type=float, default=300.0)
     parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
     parser.add_argument(
         "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],

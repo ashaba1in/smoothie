@@ -69,6 +69,8 @@ class DynamicSDE(DynamicBase):
         beta_t = self.scheduler.beta_t(t)
         drift_sde = (-1) / 2 * beta_t[:, None, None] * x_t
         diffuson_sde = torch.sqrt(beta_t)
+        if hasattr(self.scheduler, 'delta'):
+            diffuson_sde *= self.scheduler.delta
         score_output = score_fn(x_t=x_t, t=t)
         if ode_sampling:
             drift = drift_sde - (1 / 2) * beta_t[:, None, None] * score_output["score"]
@@ -79,7 +81,7 @@ class DynamicSDE(DynamicBase):
         return drift, diffusion, score_output
 
     def prior_sampling(self, shape) -> Tensor:
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             return self.config.dynamic.delta * torch.randn(*shape)
         else:
             return torch.randn(*shape)

@@ -94,14 +94,19 @@ class ClusterCosineSD(Scheduler):
 
     def sigma_bar(self, t):
         t = torch.clip(t, 1 - self.t_thr, self.t_thr)
-        return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) + self.addendum
+        # return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) + self.addendum
+        return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * t / (1 - t)) + self.addendum
 
     def beta_t(self, t):
         t = torch.clip(t, 1 - self.t_thr, self.t_thr)
-        beta_t = 2 * self.multiplier * self.d / (
-                (self.d ** 2 * (1 - t) + t) *
-                torch.sqrt(t * (1 - t)) *
-                (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
+        # beta_t = 2 * self.multiplier * self.d / (
+        #         (self.d ** 2 * (1 - t) + t) *
+        #         torch.sqrt(t * (1 - t)) *
+        #         (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
+        # )
+        beta_t = 4 * self.multiplier * self.d / (
+                (self.d ** 2 * (1 - t)**2 + t**2) *
+                (torch.arctan(1 / self.d * t / (1 - t)) * self.multiplier + np.pi / 2 * self.addendum)
         )
         return beta_t
 

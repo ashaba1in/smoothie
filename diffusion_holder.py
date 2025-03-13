@@ -296,7 +296,7 @@ class DiffusionRunner:
         tok_trg = self.tokenizer(
             texts_trg,
             add_special_tokens=True,
-            padding=True,
+            padding='max_length',
             truncation=True,
             max_length=self.config.data.max_sequence_len,
             return_tensors="pt",
@@ -309,14 +309,14 @@ class DiffusionRunner:
             tok_src = self.tokenizer(
                 texts_src,
                 add_special_tokens=True,
-                padding=True,
+                padding='max_length',
                 truncation=True,
                 max_length=self.config.data.max_context_len,
                 return_tensors="pt",
                 return_attention_mask=True,
                 return_token_type_ids=False,
             )
-            
+
             new_batch = {
                 "text_src": texts_src,
                 "input_ids_src": tok_src["input_ids"],
@@ -524,7 +524,7 @@ class DiffusionRunner:
             "attention_mask": batch["attention_mask_trg"]
         })
         target = clean_x.clone()
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x,
                 sigma_0=self.config.dynamic.sigma_min,
@@ -534,13 +534,14 @@ class DiffusionRunner:
         x_0_self_cond = torch.zeros_like(target)
         per_t_losses = []
         mean_id_probs_t = []
+        accuracies = []
         ts = torch.linspace(0, self.dynamic.T, self.dynamic.N)
         for t in ts:
             timesteps = torch.empty(size=(clean_x.shape[0],), device=clean_x.device).fill_(t)
             marg_forward = self.dynamic.marginal(clean_x, timesteps, noise=noise)
             x_t = marg_forward['x_t']
 
-            if self.config.dynamic.scheduler == 'cluster_sd':
+            if self.config.cluster_diffusion:
                 model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
@@ -554,22 +555,32 @@ class DiffusionRunner:
             loss = mse_loss(target, x_0, mask=None)
 
             per_t_losses.append(loss.item())
-            if self.config.dynamic.scheduler == 'cluster_sd':
+            pred_tokens = self.decoder(x_0).argmax(-1)
+            mask = batch['attention_mask_trg'].bool()
+            accuracies.append((pred_tokens[mask] == batch["input_ids_trg"][mask]).float().mean().item())
+            if self.config.cluster_diffusion:
                 probs_t = torch.softmax(x_t, dim=-1)
                 id_probs_t = probs_t.gather(2, batch["input_ids_trg"].unsqueeze(-1))
                 mean_id_probs_t.append(id_probs_t.mean().item())
 
         dir_path = f'plots/{self.config.training.checkpoints_prefix}'
         os.makedirs(dir_path, exist_ok=True)
-        fig = plt.figure(figsize=(8, 4))
-        plt.subplot(1, 2, 1)
+        fig = plt.figure(figsize=(12, 4))
+
+        plt.subplot(1, 3, 1)
         plt.plot(ts, per_t_losses)
         plt.xlabel('timestep')
         plt.title('Reconstruction loss')
         plt.grid()
 
-        if self.config.dynamic.scheduler == 'cluster_sd':
-            plt.subplot(1, 2, 2)
+        plt.subplot(1, 3, 2)
+        plt.plot(ts, accuracies)
+        plt.xlabel('timestep')
+        plt.title('Accuracies')
+        plt.grid()
+
+        if self.config.cluster_diffusion:
+            plt.subplot(1, 3, 3)
             plt.plot(ts, mean_id_probs_t)
             plt.xlabel('timestep')
             plt.title('Mean id_prob$_t$')
@@ -630,7 +641,7 @@ class DiffusionRunner:
         score = (-x_t + sqrt(alpha_t) * x_0) / std**2
         """
         params = self.dynamic.marginal_params(t)
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             # x_t is [bs, seq_len, V]
             embeddings = self.encoder.embeddings
             model_input = torch.softmax(x_t, dim=-1) @ embeddings
@@ -678,7 +689,7 @@ class DiffusionRunner:
         mask = None
 
         target = clean_x.clone()
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             embeddings = self.encoder.embeddings
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x,
@@ -701,7 +712,7 @@ class DiffusionRunner:
                 params_next = self.dynamic.marginal_params(t_next)
                 x_t_next = params_next["mu"] * clean_x + params_next["std"] * noise
 
-                if self.config.dynamic.scheduler == 'cluster_sd':
+                if self.config.cluster_diffusion:
                     model_input = torch.softmax(x_t_next, dim=-1) @ self.encoder.embeddings
                 else:
                     model_input = x_t_next
@@ -713,7 +724,7 @@ class DiffusionRunner:
                         x_0_self_cond=x_0_self_cond
                     ).detach()
 
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
             model_input = x_t
@@ -736,7 +747,7 @@ class DiffusionRunner:
 
         with torch.no_grad():
             stat_dict = {}
-            if self.config.dynamic.scheduler == 'cluster_sd':
+            if self.config.cluster_diffusion:
                 D_0_dict = get_stat(clean_x, mask)
                 for key in D_0_dict:
                     stat_dict[f"D_0_{key}"] = D_0_dict[key]
@@ -867,7 +878,7 @@ class DiffusionRunner:
     ) -> torch.Tensor:
         self.score_estimator.eval()
 
-        if self.config.dynamic.scheduler == 'cluster_sd':
+        if self.config.cluster_diffusion:
             shape = (
                 batch_size,
                 self.config.data.max_sequence_len,
