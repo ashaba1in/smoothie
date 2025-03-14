@@ -111,7 +111,7 @@ def create_config(args):
     if config.embeddings_path is not None:
         pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'cluster_sd':
-        pref = f"cluster_min{dynamic.sigma_min}_max{dynamic.sigma_max}"
+        pref = f"cluster_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
 

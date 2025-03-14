@@ -41,7 +41,7 @@ def filter_empty_texts(predictions, references):
     return pred_list, ref_list
 
 
-def compute_ppl(predictions, model_id='EleutherAI/gpt-neo-1.3B'):
+def compute_ppl(predictions, model_id='gpt2-large'):
     torch.cuda.empty_cache()
 
     predictions = [p for p in predictions if p]
