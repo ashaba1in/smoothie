@@ -188,6 +188,11 @@ class DiffusionRunner:
         else:
             item = (-self.tracked_test_metric[self.step], save_path)
 
+        if last:
+            self.__save_checkpoint(save_path)
+            heapq.heappush(self.all_checkpoints, item)
+            return
+
         if self.config.save_top_k is None or self.config.save_top_k > len(self.all_checkpoints):
             self.__save_checkpoint(save_path)
             heapq.heappush(self.all_checkpoints, item)
@@ -961,7 +966,7 @@ class DiffusionRunner:
                 result_list[dataset_name].append(
                     {key: result_dict[dataset_name][key][ind] for key in keys}
                 )
-                
+
         if not dist.is_initialized() or dist.get_rank() == 0:
             if not os.path.exists(self.config.validation.texts_path):
                 os.makedirs(self.config.validation.texts_path)
