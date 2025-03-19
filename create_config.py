@@ -1,6 +1,7 @@
 import ml_collections
 import os
 from transformers import AutoConfig
+import torch
 
 
 def create_config(args):
@@ -42,7 +43,7 @@ def create_config(args):
     dynamic = config.dynamic = ml_collections.ConfigDict()
     dynamic.solver = 'euler'
     dynamic.scheduler = args.scheduler
-    dynamic.N = 50
+    dynamic.N = 100
     dynamic.beta_min = 0.1
     dynamic.beta_max = 20
     dynamic.ode_sampling = False
@@ -84,7 +85,7 @@ def create_config(args):
     config.finetuning = False
     config.seed = 0
     config.ddp = True
-    config.use_self_cond = True
+    config.use_self_cond = False
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
     config.emb = args.emb
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
@@ -104,6 +105,10 @@ def create_config(args):
     config.se_config.is_conditional = config.is_conditional
     config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_link).vocab_size
     config.se_config.use_self_cond = config.use_self_cond
+    if 'A100' in torch.cuda.get_device_name(0) or 'V100' in torch.cuda.get_device_name(0):
+        config.se_config._attn_implementation = 'sdpa'
+    else:
+        config.se_config._attn_implementation = 'eager'
 
     config.project_name = args.project_name
     config.timesteps = "linear"
