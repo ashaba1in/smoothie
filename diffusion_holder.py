@@ -830,7 +830,7 @@ class DiffusionRunner:
         return result_dict
 
     @torch.no_grad()
-    def generate_text_batch(self, batch_size, cond_x=None, attention_mask=None, cond_mask=None):
+    def generate_text_batch(self, batch_size, cond_x=None, attention_mask=None, cond_mask=None, eps_t=0.0):
         if attention_mask is not None:
             attention_mask = attention_mask.cuda()
 
@@ -839,6 +839,7 @@ class DiffusionRunner:
             attention_mask=attention_mask,
             cond_x=cond_x,
             cond_mask=cond_mask,
+            eps_t=eps_t,
         )
 
         output = self.pred_logits(pred_embeddings, cond_x=cond_x, cond_mask=cond_mask)
@@ -880,6 +881,7 @@ class DiffusionRunner:
             cond_x=None,
             cond_mask=None,
             attention_mask=None,
+            eps_t=0.0,
     ) -> torch.Tensor:
         self.score_estimator.eval()
 
@@ -900,14 +902,8 @@ class DiffusionRunner:
             x_0_self_cond = torch.zeros(
                 *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
             )
-            eps_t = 0.01
 
-            if self.config.timesteps == "linear":
-                timesteps = torch.linspace(self.dynamic.T, eps_t, self.dynamic.N + 1, device=self.device)
-            elif self.config.timesteps == "quad":
-                deg = 2
-                timesteps = torch.linspace(1, 0, self.dynamic.N + 1, device=self.device) ** deg * (self.dynamic.T - eps_t) + eps_t
-
+            timesteps = torch.linspace(self.dynamic.T, eps_t, self.dynamic.N + 1, device=self.device)
             for idx in tqdm(range(self.dynamic.N)):
                 t = timesteps[idx]
                 next_t = timesteps[idx + 1]
@@ -923,7 +919,7 @@ class DiffusionRunner:
                     x_0_self_cond=x_0_self_cond,
                 )
 
-                x, x_mean = output["x"], output["x_mean"]
+                x = output["x"]
                 x_0_self_cond = output["latent_pred"]
 
             pred_embeddings = output["latent_pred"]

@@ -11,7 +11,7 @@ def create_config(args):
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
-    training.training_iters = 500_000 * training.accum_batch_steps
+    training.training_iters = 1_000_000 * training.accum_batch_steps
     training.training_iters = training.training_iters
     training.checkpoint_freq = 25_000 * training.accum_batch_steps
     training.eval_freq = 25_000 * training.accum_batch_steps
@@ -32,7 +32,6 @@ def create_config(args):
     optim.eps = 1e-6
 
     loss = config.loss = ml_collections.ConfigDict()
-    loss.ce_coef = 0.
 
     validation = config.validation = ml_collections.ConfigDict()
     validation.batch_size = 100
