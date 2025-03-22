@@ -85,29 +85,34 @@ class Sqrt(Scheduler):
 
 
 class ClusterCosineSD(Scheduler):
-    def __init__(self, d=5, delta=0.25, sigma_min=0.1, sigma_max=20.0):
+    def __init__(self, d=5, delta=0.25, sigma_min=0.1, sigma_max=20.0, sqrt=True):
         self.d = d
         self.delta = delta
         self.multiplier = (sigma_max / sigma_min - 1)
         self.addendum = 1
         self.t_thr = 0.9995
+        self.sqrt = sqrt
 
     def sigma_bar(self, t):
         t = torch.clip(t, 1 - self.t_thr, self.t_thr)
-        # return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) + self.addendum
-        return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * t / (1 - t)) + self.addendum
+        if self.sqrt:
+            return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) + self.addendum
+        else:
+            return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * t / (1 - t)) + self.addendum
 
     def beta_t(self, t):
         t = torch.clip(t, 1 - self.t_thr, self.t_thr)
-        # beta_t = 2 * self.multiplier * self.d / (
-        #         (self.d ** 2 * (1 - t) + t) *
-        #         torch.sqrt(t * (1 - t)) *
-        #         (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
-        # )
-        beta_t = 4 * self.multiplier * self.d / (
-                (self.d ** 2 * (1 - t)**2 + t**2) *
-                (torch.arctan(1 / self.d * t / (1 - t)) * self.multiplier + np.pi / 2 * self.addendum)
-        )
+        if self.sqrt:
+            beta_t = 2 * self.multiplier * self.d / (
+                    (self.d ** 2 * (1 - t) + t) *
+                    torch.sqrt(t * (1 - t)) *
+                    (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
+            )
+        else:
+            beta_t = 4 * self.multiplier * self.d / (
+                    (self.d ** 2 * (1 - t)**2 + t**2) *
+                    (torch.arctan(1 / self.d * t / (1 - t)) * self.multiplier + np.pi / 2 * self.addendum)
+            )
         return beta_t
 
     def params(self, t):
