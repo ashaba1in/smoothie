@@ -19,6 +19,7 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
+    training.step_unrolled = args.step_unrolled
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.
@@ -30,8 +31,6 @@ def create_config(args):
     optim.beta_1 = 0.9
     optim.beta_2 = 0.98
     optim.eps = 1e-6
-
-    loss = config.loss = ml_collections.ConfigDict()
 
     validation = config.validation = ml_collections.ConfigDict()
     validation.batch_size = 100
@@ -123,6 +122,9 @@ def create_config(args):
     config.tracked_metric = data.datasets.metrics[config.tracked_dataset]["tracked_metric"]
     config.higher_better = True
     config.save_top_k = 2
+
+    if config.use_self_cond and config.training.step_unrolled:
+        raise Exception('Can use both self-conditioning and step-unrolling')
     return config
 
 

@@ -220,4 +220,8 @@ def parse():
         ])
     parser.add_argument('--project_name', type=str, default='test')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
+    parser.add_argument(
+        "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
+    )
     return parser.parse_args()
+

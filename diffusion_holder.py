@@ -695,39 +695,55 @@ class DiffusionRunner:
 
         target = clean_x.clone()
         if self.config.cluster_diffusion:
-            embeddings = self.encoder.embeddings
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x,
                 sigma_0=self.config.dynamic.sigma_min,
-                embeddings=embeddings,
+                embeddings=self.encoder.embeddings,
             )
 
         # Noising
         batch_size = clean_x.size(0)
 
         t = self.sample_time(batch_size, eps=eps)
-        marg_forward = self.dynamic.marginal(clean_x, t)
-        x_t, noise = marg_forward['x_t'], marg_forward['noise']
+        x_t = self.dynamic.marginal(clean_x, t)['x_t']
 
-        # self-cond estimate
+        loss = 0
         x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
-        if self.config.use_self_cond and random.random() > 0.5:
-            with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
-                t_next = t
-                params_next = self.dynamic.marginal_params(t_next)
-                x_t_next = params_next["mu"] * clean_x + params_next["std"] * noise
+        apply_self_cond = self.config.use_self_cond and random.random() > 0.5
+        if self.config.training.step_unrolled or apply_self_cond:
+            if self.config.cluster_diffusion:
+                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+            else:
+                model_input = x_t
 
-                if self.config.cluster_diffusion:
-                    model_input = torch.softmax(x_t_next, dim=-1) @ self.encoder.embeddings
-                else:
-                    model_input = x_t_next
-                with torch.no_grad():
-                    x_0_self_cond = self.ddp_score_estimator(
-                        x_t=model_input, time_t=t_next, cond=cond_x,
-                        attention_mask=mask, 
+            if self.config.training.step_unrolled:
+                with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+                    x_0 = self.ddp_score_estimator(
+                        x_t=model_input, time_t=t, cond=cond_x,
+                        attention_mask=mask,
                         cond_mask=batch.get("attention_mask_src"),
                         x_0_self_cond=x_0_self_cond
-                    ).detach()
+                    )
+                    first_loss_x_0 = mse_loss(target, x_0, mask)
+                    loss = loss + first_loss_x_0
+
+                    new_clean_x = x_0.detach()
+                    if self.config.cluster_diffusion:
+                        new_clean_x = convert_to_simplex(
+                            input_embeddings=new_clean_x,
+                            sigma_0=self.config.dynamic.sigma_min,
+                            embeddings=self.encoder.embeddings,
+                        )
+                    x_t = self.dynamic.marginal(new_clean_x, t)['x_t']
+            elif apply_self_cond:
+                with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+                    with torch.no_grad():
+                        x_0_self_cond = self.ddp_score_estimator(
+                            x_t=model_input, time_t=t, cond=cond_x,
+                            attention_mask=mask,
+                            cond_mask=batch.get("attention_mask_src"),
+                            x_0_self_cond=x_0_self_cond
+                        ).detach()
 
         if self.config.cluster_diffusion:
             model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
@@ -744,11 +760,14 @@ class DiffusionRunner:
 
         # MSE losses
         loss_x_0 = mse_loss(target, x_0, mask)
+        loss = loss + loss_x_0
 
         loss_dict = {
-            'total_loss': loss_x_0,
+            'total_loss': loss,
             'loss_x_0': loss_x_0,
         }
+        if self.config.training.step_unrolled:
+            loss_dict['first_loss_x_0'] = first_loss_x_0
 
         with torch.no_grad():
             stat_dict = {}
