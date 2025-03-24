@@ -50,7 +50,10 @@ class DownstreamTaskDatasetDDP:
         dt = self.split_data_across_gpu(dt)
         
         self.dt = dt.map(
-            partial(batch_preprocessing, split=self.split, dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef),
+            partial(
+                batch_preprocessing, split=self.split,
+                dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
+            ),
             batched=True,
             load_from_cache_file=False,
             num_proc=30,

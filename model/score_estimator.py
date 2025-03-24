@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
 import math
-import inspect
-from copy import deepcopy
-from typing import List, Optional, Tuple, Union, Set, Callable
+from typing import Optional, Tuple
 from transformers.models.bert.modeling_bert import BertAttention, BertIntermediate, BertOutput, \
-    apply_chunking_to_forward, BertConfig
+    apply_chunking_to_forward
 
 
 class BertBlock(nn.Module):
@@ -14,7 +12,7 @@ class BertBlock(nn.Module):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = BertAttention(config)
-        self.is_decoder = config.is_decoder
+        self.is_decoder = config.is_conditional
         if self.is_decoder:
             self.crossattention = BertAttention(config, position_embedding_type="absolute")
         self.intermediate = BertIntermediate(config)
@@ -140,7 +138,7 @@ def timestep_embedding(timesteps, dim, max_period=10000):
 
 class ScoreEstimatorEMB(nn.Module):
     def __init__(self, config):
-        super(ScoreEstimatorEMB, self).__init__()
+        super().__init__()
 
         self.use_self_cond = config.use_self_cond
         self.config = config

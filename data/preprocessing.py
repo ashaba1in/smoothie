@@ -19,28 +19,21 @@ def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
                 src, trg = trg, src
             new_batch["text_src"].append(src)
             new_batch["text_trg"].append(trg)
-        new_batch["text_src"] = [f"Task is {dataset_name}. Prompt: {src}" for src in new_batch["text_src"]]
-        
     elif dataset_name == "xsum":
         new_batch = {
             "text_src": batch["document"],
             "text_trg": batch["summary"],
         }
-        new_batch["text_src"] = [f"Task is {dataset_name}. Prompt: {src}" for src in new_batch["text_src"]]
-        
     elif dataset_name == "wiki_auto":
         new_batch = {
             "text_src": batch["source"],
             "text_trg": batch["target"],
             "references": batch["references"],
         }
-        new_batch["text_src"] = [f"Task is {dataset_name}. Prompt: {src}" for src in new_batch["text_src"]]
-
     elif dataset_name == "rocstories":
         new_batch = {
             "text_trg": batch["target"],
         }
-
     else:
         raise Exception(f"Unknown dataset: {dataset_name}")
 

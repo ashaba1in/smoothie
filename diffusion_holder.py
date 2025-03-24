@@ -314,7 +314,7 @@ class DiffusionRunner:
             tok_src = self.tokenizer(
                 texts_src,
                 add_special_tokens=True,
-                padding='max_length',
+                padding=True,
                 truncation=True,
                 max_length=self.config.data.max_context_len,
                 return_tensors="pt",

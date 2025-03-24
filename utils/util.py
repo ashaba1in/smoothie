@@ -223,5 +223,6 @@ def parse():
     parser.add_argument(
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
     )
+    parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
     return parser.parse_args()
 
