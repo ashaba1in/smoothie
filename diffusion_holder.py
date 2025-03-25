@@ -3,6 +3,7 @@ import wandb
 import random
 import numpy as np
 import torch
+import torch.nn.functional as F
 import ml_collections
 import torch.distributed as dist
 from matplotlib import pyplot as plt
@@ -64,6 +65,7 @@ class DiffusionRunner:
             emb=config.emb,
             embeddings_path=config.embeddings_path,
             emb_statistics_agg_type=config.emb_statistics_agg_type,
+            random_init=config.random_init_embeddings
         ).eval().cuda()
 
         # Decoder
@@ -71,9 +73,12 @@ class DiffusionRunner:
             decoder_config=config.decoder,
             diffusion_config=config.se_config
         )
-        self.restore_decoder()
-        self.decoder = self.decoder.cuda().eval()
-        
+        if not config.training.train_embeddings:
+            self.restore_decoder()
+            self.decoder.eval()
+
+        self.decoder = self.decoder.cuda()
+
         # Score estimator
         self.se_config = deepcopy(config.se_config)
         self.se_config.use_self_cond = config.use_self_cond
@@ -271,8 +276,11 @@ class DiffusionRunner:
         ema.restore(score_model.parameters())
 
     def set_optimizer(self) -> None:
+        parameters = self.score_estimator.parameters()
+        if self.config.training.train_embeddings:
+            parameters = list(parameters) + [self.encoder.embeddings] + list(self.decoder.parameters())
         optimizer = torch.optim.AdamW(
-            self.score_estimator.parameters(),
+            parameters,
             lr=self.config.optim.lr,
             weight_decay=self.config.optim.weight_decay,
             betas=(self.config.optim.beta_1, self.config.optim.beta_2),
@@ -292,7 +300,7 @@ class DiffusionRunner:
             cycle_limit=1,
             t_in_epochs=False,
         )
-        
+
     def set_grad_scaler(self) -> None:
         self.grad_scaler = GradScaler()
 
@@ -504,7 +512,7 @@ class DiffusionRunner:
                 "input_ids": batch["input_ids_trg"], 
                 "attention_mask": batch["attention_mask_trg"]
             })
-            
+
             loss_dict, _ = self.calc_loss(clean_x=trg_x, cond_x=src_x, batch=batch)
             for k, v in loss_dict.items():
                 if k in valid_loss:
@@ -553,7 +561,9 @@ class DiffusionRunner:
             # model prediction
             with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
                 x_0 = self.ddp_score_estimator(
-                    x_t=model_input, time_t=timesteps, x_0_self_cond=x_0_self_cond
+                    x_t=model_input, time_t=timesteps, cond=src_x,
+                    cond_mask=batch.get("attention_mask_src"),
+                    x_0_self_cond=x_0_self_cond
                 )
 
             # MSE losses
@@ -696,7 +706,7 @@ class DiffusionRunner:
         target = clean_x.clone()
         if self.config.cluster_diffusion:
             clean_x = convert_to_simplex(
-                input_embeddings=clean_x,
+                input_embeddings=clean_x.detach(),
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=self.encoder.embeddings,
             )
@@ -708,6 +718,7 @@ class DiffusionRunner:
         x_t = self.dynamic.marginal(clean_x, t)['x_t']
 
         loss = 0
+        loss_dict = dict()
         x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
         apply_self_cond = self.config.use_self_cond and random.random() > 0.5
         if self.config.training.step_unrolled or apply_self_cond:
@@ -726,6 +737,7 @@ class DiffusionRunner:
                     )
                     first_loss_x_0 = mse_loss(target, x_0, mask)
                     loss = loss + first_loss_x_0
+                    loss_dict['first_loss_x_0'] = first_loss_x_0
 
                     new_clean_x = x_0.detach()
                     if self.config.cluster_diffusion:
@@ -762,12 +774,45 @@ class DiffusionRunner:
         loss_x_0 = mse_loss(target, x_0, mask)
         loss = loss + loss_x_0
 
-        loss_dict = {
-            'total_loss': loss,
-            'loss_x_0': loss_x_0,
-        }
-        if self.config.training.step_unrolled:
-            loss_dict['first_loss_x_0'] = first_loss_x_0
+        loss_dict['loss_x_0'] = loss_x_0
+
+        if self.config.training.train_embeddings:
+            # x_T loss to regularize embeddings
+            t = t.fill_(self.dynamic.T)
+            mu_T = self.dynamic.marginal_params(t)['mu']
+            x_T = mu_T * clean_x
+            if self.config.cluster_diffusion:
+                model_input_T = torch.softmax(x_T, dim=-1) @ self.encoder.embeddings
+                tT_loss = mse_loss(model_input_T, self.encoder.embeddings.mean(0, keepdim=True).detach())
+            else:
+                tT_loss = torch.mean(x_T**2)
+            loss_dict['tT_loss'] = tT_loss
+
+            # Decoder loss to learn decoder and prevent embeddings from collapsing
+            # 2 ways of computing decoder loss
+            # 1) Pros: decoder is tuned for model's predictions. Cons: predictions might be not good, because t is big.
+            # if self.config.cluster_diffusion:
+            #     input_embeddings = torch.softmax(clean_x, dim=-1) @ self.encoder.embeddings
+            # else:
+            #     input_embeddings = clean_x
+            # decoder_input = input_embeddings + (x_0 - input_embeddings).detach()
+            # 2) Pros: input is not that noisy. Cons: decoder is not tuned to model as good.
+            t = torch.randn_like(t) * self.config.decoder.T
+            decoder_x_t = self.dynamic.marginal(clean_x, t)["x_t"]
+            if self.config.cluster_diffusion:
+                decoder_input = torch.softmax(decoder_x_t, dim=-1) @ self.encoder.embeddings
+            else:
+                decoder_input = decoder_x_t
+            logits = self.decoder(decoder_input, cond_x=cond_x, cond_mask=batch.get("attention_mask_src"))
+            nll_loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), batch['input_ids_trg'].view(-1))
+
+            acc = (logits.argmax(dim=-1) == batch['input_ids_trg']).float().mean()
+            loss_dict['accuracy'] = acc
+            loss_dict['nll_loss'] = nll_loss
+
+            loss = loss + tT_loss + nll_loss
+
+        loss_dict['total_loss'] = loss
 
         with torch.no_grad():
             stat_dict = {}

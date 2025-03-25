@@ -20,6 +20,7 @@ def create_config(args):
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
     training.step_unrolled = args.step_unrolled
+    training.train_embeddings = args.train_embeddings
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.
@@ -57,14 +58,17 @@ def create_config(args):
     model.loss = "L_x_0"
     model.encoder_name = args.encoder_name
 
-    if "bert" in model.encoder_name.lower():
-        model.encoder_link = 'google-bert/bert-base-cased'
-    elif "roberta" in model.encoder_name.lower():
-        model.encoder_link = 'FacebookAI/roberta-base'
-    elif "t5" in model.encoder_name.lower():
-        model.encoder_link = 'google-t5/t5-base'
-    elif "bart" in model.encoder_name.lower():
-        model.encoder_link = 'facebook/bart-base'
+    if args.encoder_link is None:
+        if "bert" in model.encoder_name.lower():
+            model.encoder_link = 'google-bert/bert-base-cased'
+        elif "roberta" in model.encoder_name.lower():
+            model.encoder_link = 'FacebookAI/roberta-base'
+        elif "t5" in model.encoder_name.lower():
+            model.encoder_link = 'google-t5/t5-base'
+        elif "bart" in model.encoder_name.lower():
+            model.encoder_link = 'facebook/bart-base'
+    else:
+        model.encoder_link = args.encoder_link
 
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
@@ -89,6 +93,7 @@ def create_config(args):
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
     config.cluster_diffusion = args.cluster_diffusion
+    config.random_init_embeddings = args.random_init_embeddings
 
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]
@@ -114,7 +119,9 @@ def create_config(args):
     if config.embeddings_path is not None:
         pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'cluster_sd':
-        pref = f"cluster_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
+        pref = f"cluster_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
+        if training.step_unrolled:
+            pref += '_step_unrolled'
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
 
@@ -176,7 +183,7 @@ def create_decoder_config():
     config.is_conditional = False
     config.dataset = ""
     config.T = 0.15
-    config.eps = 0.001
+    config.eps = 0.0
     config.diffusion_forward = True
     config.suffix = ""
     config.num_hidden_layers = 3

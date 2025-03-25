@@ -224,5 +224,13 @@ def parse():
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
     )
     parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
+    parser.add_argument(
+        "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'
+    )
+    parser.add_argument(
+        "--train_embeddings", type=bool, default=False, help='If set, train embeddings and decoder with diffusion'
+    )
+    parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
+
     return parser.parse_args()
 

@@ -1,5 +1,5 @@
-
 import torch
+from torch import nn
 import numpy as np
 from transformers import AutoModel, T5EncoderModel, AutoTokenizer
 
@@ -7,23 +7,24 @@ from transformers import AutoModel, T5EncoderModel, AutoTokenizer
 class Encoder(torch.nn.Module):
     def __init__(
             self, encoder_link, enc_normalizer, is_change_sp_tokens=True,
-            emb=False, embeddings_path=None, emb_statistics_agg_type='features'
+            emb=False, embeddings_path=None, emb_statistics_agg_type='features',
+            random_init=False
     ):
         super().__init__()
         self.emb = emb
         self.encoder_link = encoder_link
         if "bert" in encoder_link.lower():
             self.encoder = AutoModel.from_pretrained(self.encoder_link)
-            self.embeddings = self.encoder.embeddings.word_embeddings.weight.data.cpu()
+            self.embeddings = self.encoder.embeddings.word_embeddings.weight.cpu()
         elif "roberta" in encoder_link.lower():
             self.encoder = AutoModel.from_pretrained(self.encoder_link)
-            self.embeddings = self.encoder.embeddings.word_embeddings.weight.data.cpu()
+            self.embeddings = self.encoder.embeddings.word_embeddings.weight.cpu()
         elif "t5" in encoder_link.lower():
             self.encoder = T5EncoderModel.from_pretrained(self.encoder_link)
-            self.embeddings = self.encoder.encoder.embed_tokens.weight.data.cpu()
+            self.embeddings = self.encoder.encoder.embed_tokens.weight.cpu()
         elif "bart" in encoder_link.lower():
             self.encoder = AutoModel.from_pretrained(self.encoder_link).encoder
-            self.embeddings = self.encoder.embed_tokens.weight.data.cpu()
+            self.embeddings = self.encoder.embed_tokens.weight.cpu()
         else:
             raise Exception("Unknown encoder name. Add encoder to ./model/encoder.py")
         if embeddings_path is not None:
@@ -32,6 +33,8 @@ class Encoder(torch.nn.Module):
                 self.embeddings = weights['eig_vec'] * weights['eig_val']**0.5
             else:
                 self.embeddings = weights
+        if random_init:
+            self.embeddings = nn.Embedding(*self.embeddings.shape).weight
 
         if self.emb:
             if 'bert' in encoder_link:
@@ -40,15 +43,14 @@ class Encoder(torch.nn.Module):
                 used_ids = torch.arange(start=0, end=self.embeddings.shape[0], device=self.embeddings.device)
                 unused_ids = []
             if emb_statistics_agg_type == 'features':
-                dim = 0
+                self.dim = 0
             elif emb_statistics_agg_type == 'total':
-                dim = (0, 1)
+                self.dim = (0, 1)
             else:
                 raise Exception("Unknown embedding aggregation type, support only ['features', 'total']")
 
-            self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=dim, keepdim=True)
-            self.emb_std = torch.std(self.embeddings[used_ids, :], dim=dim, keepdim=True)
-            # self.embeddings[unused_ids, :] *= torch.inf
+            self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
+            self.emb_std = torch.std(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
             self.embeddings = (self.embeddings - self.emb_mean) / self.emb_std
             self.embeddings = self.embeddings.cuda()
 
@@ -77,6 +79,12 @@ class Encoder(torch.nn.Module):
                     sequence_output[input_ids == sp_token_id] = self._normalize_emb(self.embeddings[sp_token_id]).type(sequence_output.dtype).to(self.encoder.device)
         
         return sequence_output
+
+    @torch.no_grad()
+    def normalize_embeddings(self):
+        self.emb_mean = torch.mean(self.embeddings, dim=self.dim, keepdim=True)
+        self.emb_std = torch.std(self.embeddings, dim=self.dim, keepdim=True)
+        self.embeddings = (self.embeddings - self.emb_mean) / self.emb_std
 
     def _normalize_emb(self, x):
         return x / torch.norm(x) * np.sqrt(x.shape[-1])
