@@ -231,6 +231,9 @@ def parse():
         "--train_embeddings", type=bool, default=False, help='If set, train embeddings and decoder with diffusion'
     )
     parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
+    parser.add_argument(
+        "--run_name", type=str, default="", help='Run name'
+    )
 
     return parser.parse_args()
 

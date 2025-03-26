@@ -122,7 +122,7 @@ def create_config(args):
         pref = f"cluster_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
         if training.step_unrolled:
             pref += '_step_unrolled'
-    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-agg_{config.emb_statistics_agg_type}-{os.environ.get('SLURM_JOB_ID')}"
+    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}-{os.environ.get('SLURM_JOB_ID')}"
     config.eval = False
 
     config.tracked_dataset = data.datasets.datasets_list[0]
