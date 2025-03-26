@@ -51,8 +51,8 @@ class Encoder(torch.nn.Module):
 
             self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
             self.emb_std = torch.std(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
-            self.embeddings = (self.embeddings - self.emb_mean) / self.emb_std
-            self.embeddings = self.embeddings.cuda()
+            self.embeddings.data = (self.embeddings.data - self.emb_mean) / self.emb_std
+            self.embeddings.cuda()
 
         self.enc_normalizer = enc_normalizer
         self.is_change_sp_tokens = is_change_sp_tokens
