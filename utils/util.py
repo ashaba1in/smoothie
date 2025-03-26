@@ -113,7 +113,7 @@ def bert_acc(targets, outputs, mask):
 def mse_loss(inputs, targets, mask=None):
     if mask is None:
         mask = torch.ones(
-            (inputs.shape[-1], inputs.shape[1]),
+            (inputs.shape[0], inputs.shape[1]),
             device=f"cuda:{dist.get_rank()}" if dist.is_initialized() else "cuda:0",
             requires_grad=False,
             dtype=torch.int64,
