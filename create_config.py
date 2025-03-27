@@ -21,6 +21,8 @@ def create_config(args):
     training.checkpoint_name = ""
     training.step_unrolled = args.step_unrolled
     training.train_embeddings = args.train_embeddings
+    training.x_T_coef = args.x_T_coef
+    training.nll_coef = args.nll_coef
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.

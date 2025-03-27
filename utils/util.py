@@ -230,6 +230,8 @@ def parse():
     parser.add_argument(
         "--train_embeddings", type=bool, default=False, help='If set, train embeddings and decoder with diffusion'
     )
+    parser.add_argument("--x_T_coef", type=float, default=1., help='Coef for x_T loss for emb training')
+    parser.add_argument("--nll_coef", type=float, default=1., help='Coef for nll loss for emb training')
     parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
     parser.add_argument(
         "--run_name", type=str, default="", help='Run name'

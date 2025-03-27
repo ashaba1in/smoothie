@@ -810,7 +810,7 @@ class DiffusionRunner:
             loss_dict['accuracy'] = acc
             loss_dict['nll_loss'] = nll_loss
 
-            loss = loss + tT_loss + nll_loss
+            loss = loss + self.config.training.x_T_coef * tT_loss + self.config.training.nll_coef * nll_loss
 
         loss_dict['total_loss'] = loss
 
