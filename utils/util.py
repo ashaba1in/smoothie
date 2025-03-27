@@ -199,6 +199,7 @@ def parse():
     parser.add_argument("--delta", type=float, default=0.25)
     parser.add_argument("--sigma_min", type=float, default=5.0)
     parser.add_argument("--sigma_max", type=float, default=300.0)
+    parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
     parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
     parser.add_argument(
         "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],
@@ -218,12 +219,11 @@ def parse():
             "roberta-base",
             "bart-base"
         ])
-    parser.add_argument('--project_name', type=str, default='test')
+    parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     parser.add_argument(
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
     )
-    parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
     parser.add_argument(
         "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'
     )
@@ -232,7 +232,10 @@ def parse():
     )
     parser.add_argument("--x_T_coef", type=float, default=1., help='Coef for x_T loss for emb training')
     parser.add_argument("--nll_coef", type=float, default=1., help='Coef for nll loss for emb training')
-    parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
+    parser.add_argument('--condition_type', type=str, default='cross-attention', choices=[
+            "cross-attention", "concatenation",
+        ], help='The type of conditioning for diffusion model')
+    parser.add_argument('--project_name', type=str, default='test')
     parser.add_argument(
         "--run_name", type=str, default="", help='Run name'
     )

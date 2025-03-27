@@ -114,6 +114,9 @@ def create_config(args):
         config.se_config._attn_implementation = 'sdpa'
     else:
         config.se_config._attn_implementation = 'eager'
+    config.se_config.max_sequence_len = data.max_sequence_len
+    config.se_config.max_context_len = data.max_context_len
+    config.se_config.condition_type = args.condition_type
 
     config.project_name = args.project_name
     config.timesteps = "linear"

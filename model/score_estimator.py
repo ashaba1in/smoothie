@@ -12,8 +12,8 @@ class BertBlock(nn.Module):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = BertAttention(config)
-        self.is_decoder = config.is_conditional
-        if self.is_decoder:
+        self.condition_type = config.condition_type if config.is_conditional else None
+        if self.condition_type == 'cross-attention':
             self.crossattention = BertAttention(config, position_embedding_type="absolute")
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
@@ -26,13 +26,10 @@ class BertBlock(nn.Module):
             encoder_attention_mask: Optional[torch.FloatTensor] = None,
     ) -> Tuple[torch.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attention_outputs = self.attention(
-            hidden_states,
-            attention_mask,
-        )
+        self_attention_outputs = self.attention(hidden_states, attention_mask)
         attention_output = self_attention_outputs[0]
 
-        if self.is_decoder and encoder_hidden_states is not None:
+        if self.condition_type == 'cross-attention' and encoder_hidden_states is not None:
             cross_attention_outputs = self.crossattention(
                 hidden_states=attention_output,
                 attention_mask=attention_mask,
@@ -77,6 +74,9 @@ class TransformerEncoder(torch.nn.Module):
                 [nn.Linear(self.hidden_size, self.hidden_size) for _ in range(0, self.num_hidden_layers)]
             )
 
+        self.condition_type = config.condition_type
+        self.max_sequence_len = config.max_sequence_len
+
     def forward(
             self,
             x: torch.Tensor,
@@ -91,7 +91,13 @@ class TransformerEncoder(torch.nn.Module):
 
         for i, block in enumerate(self.input_blocks):
             x_input_list.append(x)
-            x = x + self.time_layers[i](emb_t)
+            time_emb = self.time_layers[i](emb_t)
+            if self.condition_type == 'concatenation':
+                # don't add time embeddings to condition
+                time_emb = time_emb.unsqueeze(1).repeat(1, x.shape[1], 1)
+                time_emb[:, self.max_sequence_len:] = 0
+
+            x = x + time_emb
             if self.use_self_cond:
                 x += self.self_cond_layers[i](x_0_self_cond)
             x = block(
@@ -103,7 +109,12 @@ class TransformerEncoder(torch.nn.Module):
 
         for i, block in enumerate(self.output_blocks):
             ind = i + self.num_hidden_layers // 2
-            x = x + x_input_list.pop() + self.time_layers[ind](emb_t)
+            time_emb = self.time_layers[ind](emb_t)
+            if self.condition_type == 'concatenation':
+                # don't add time embeddings to condition
+                time_emb = time_emb.unsqueeze(1).repeat(1, x.shape[1], 1)
+                time_emb[:, self.max_sequence_len:] = 0
+            x = x + x_input_list.pop() + time_emb
             if self.use_self_cond:
                 x += self.self_cond_layers[ind](x_0_self_cond)
             x = block(
@@ -152,7 +163,15 @@ class ScoreEstimatorEMB(nn.Module):
 
         self.encoder = TransformerEncoder(config)
 
-        self._max_position_embeddings = self.config.max_position_embeddings
+        self.condition_type = config.condition_type if config.is_conditional else None
+        if self.condition_type == 'concatenation':
+            self.sequence_embeddings = torch.nn.Embedding(2, self._hidden_layer_dim)
+
+        if self.condition_type != 'concatenation':
+            self._max_position_embeddings = self.config.max_sequence_len
+        else:
+            self._max_position_embeddings = self.config.max_sequence_len + self.config.max_context_len
+
         self.register_buffer("position_ids", torch.arange(self._max_position_embeddings).expand((1, -1)))
         self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
 
@@ -172,27 +191,35 @@ class ScoreEstimatorEMB(nn.Module):
     ):
         assert time_t is not None
 
+        if attention_mask is None:
+            attention_mask = torch.ones(*x_t.shape[:-1], device=x_t.device)
+
+        attention_mask = self.get_extended_attention_mask(
+            attention_mask=attention_mask,
+            dtype=x_t.dtype
+        )
+        if cond_mask is not None:
+            cond_mask = self.get_extended_attention_mask(
+                attention_mask=cond_mask,
+                dtype=x_t.dtype
+            )
+
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
         hidden_t = self.time_emb(emb_t)
         hidden_t = hidden_t[:, None, :]
 
+        if self.condition_type == 'concatenation':
+            x_t = torch.cat((
+                x_t + self.sequence_embeddings(torch.tensor(0, device=x_t.device)),
+                cond + self.sequence_embeddings(torch.tensor(1, device=x_t.device))
+            ), dim=-2)
+            attention_mask = torch.cat((attention_mask, cond_mask), dim=-1)
+
         seq_length = x_t.size(1)
-        position_ids = self.position_ids[:, : seq_length]
+        position_ids = self.position_ids[:, :seq_length]
         emb_pos = self.position_embeddings(position_ids)
 
-        emb_x = x_t
-        hidden_state = emb_x + emb_pos
-
-        if attention_mask is not None:
-            attention_mask = self.get_extended_attention_mask(
-                attention_mask=attention_mask,
-                dtype=hidden_state.dtype
-            )
-        if cond_mask is not None:
-            cond_mask = self.get_extended_attention_mask(
-                attention_mask=cond_mask,
-                dtype=hidden_state.dtype
-            )
+        hidden_state = x_t + emb_pos
 
         output = self.encoder(
             x=hidden_state,
@@ -202,4 +229,6 @@ class ScoreEstimatorEMB(nn.Module):
             cond_mask=cond_mask,
             x_0_self_cond=x_0_self_cond,
         )
+        if self.condition_type == 'concatenation':
+            return output[:, :self.config.max_sequence_len]
         return output
