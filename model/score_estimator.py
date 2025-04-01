@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 import math
@@ -6,13 +8,20 @@ from transformers.models.bert.modeling_bert import BertAttention, BertIntermedia
     apply_chunking_to_forward
 
 
+def get_extended_attention_mask(attention_mask, dtype):
+    if attention_mask is None:
+        return None
+    extended_attention_mask = attention_mask[:, None, None, :]
+    extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(dtype).min
+    return extended_attention_mask
+
+
 class BertBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = BertAttention(config)
-        self.is_decoder = config.is_conditional
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'cross-attention':
         # if config.is_conditional:
@@ -129,6 +138,25 @@ class TransformerEncoder(torch.nn.Module):
         return x
 
 
+class ConditionEncoder(nn.Module):
+    def __init__(self, config, num_hidden_layers):
+        super().__init__()
+
+        arch_config = deepcopy(config)
+        arch_config.is_conditional = False
+        self.blocks = torch.nn.ModuleList(
+            [BertBlock(arch_config) for _ in range(num_hidden_layers)]
+        )
+
+    def forward(self, x, attention_mask=None):
+        for _, block in enumerate(self.blocks):
+            x = block(
+                hidden_states=x,
+                attention_mask=attention_mask,
+            )
+        return x
+
+
 def timestep_embedding(timesteps, dim, max_period=10000):
     """
     Create sinusoidal timestep embeddings.
@@ -164,6 +192,8 @@ class ScoreEstimatorEMB(nn.Module):
         )
 
         self.encoder = TransformerEncoder(config)
+        if config.condition_encoder == 'transformer':
+            self.condition_encoder = ConditionEncoder(config, num_hidden_layers=6)
 
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'concatenation':
@@ -177,11 +207,6 @@ class ScoreEstimatorEMB(nn.Module):
 
         self.register_buffer("position_ids", torch.arange(self._max_position_embeddings).expand((1, -1)))
         self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
-
-    def get_extended_attention_mask(self, attention_mask, dtype):
-        extended_attention_mask = attention_mask[:, None, None, :]
-        extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(dtype).min
-        return extended_attention_mask
 
     def forward(
             self,
@@ -197,12 +222,12 @@ class ScoreEstimatorEMB(nn.Module):
         if attention_mask is None:
             attention_mask = torch.ones(*x_t.shape[:-1], device=x_t.device)
 
-        attention_mask = self.get_extended_attention_mask(
+        attention_mask = get_extended_attention_mask(
             attention_mask=attention_mask,
             dtype=x_t.dtype
         )
         if cond_mask is not None:
-            cond_mask = self.get_extended_attention_mask(
+            cond_mask = get_extended_attention_mask(
                 attention_mask=cond_mask,
                 dtype=x_t.dtype
             )
@@ -210,6 +235,9 @@ class ScoreEstimatorEMB(nn.Module):
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
         hidden_t = self.time_emb(emb_t)
         hidden_t = hidden_t[:, None, :]
+
+        if self.config.condition_encoder == 'transformer':
+            cond = self.condition_encoder(cond, cond_mask)
 
         if self.condition_type == 'concatenation':
             x_t = torch.cat((

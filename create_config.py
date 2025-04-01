@@ -118,6 +118,7 @@ def create_config(args):
     config.se_config.max_sequence_len = data.max_sequence_len
     config.se_config.max_context_len = data.max_context_len
     config.se_config.condition_type = args.condition_type
+    config.se_config.condition_encoder = args.condition_encoder
 
     config.project_name = args.project_name
     config.timesteps = "linear"

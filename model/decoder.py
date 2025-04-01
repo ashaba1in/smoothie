@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from copy import deepcopy
-from .score_estimator import BertBlock
+from .score_estimator import BertBlock, get_extended_attention_mask
 
 
 class Decoder(nn.Module):
@@ -13,15 +13,13 @@ class Decoder(nn.Module):
         arch_config = deepcopy(diffusion_config)
         arch_config.is_conditional = decoder_config.is_conditional
         arch_config.condition_type = decoder_config.condition_type
-        # arch_config.is_decoder = decoder_config.is_conditional
-        arch_config.is_decoder = False
         self.blocks = torch.nn.ModuleList(
             [BertBlock(arch_config) for _ in range(0, self.num_hidden_layers)]
         )
         self.fc = nn.Linear(arch_config.hidden_size, arch_config.vocab_size)
 
     def forward(self, x, cond_x=None, cond_mask=None):
-        extended_cond_mask = self.get_extended_attention_mask(cond_mask)
+        extended_cond_mask = get_extended_attention_mask(cond_mask, x.dtype)
         for _, block in enumerate(self.blocks):
             x = block(
                 hidden_states=x,
@@ -30,11 +28,4 @@ class Decoder(nn.Module):
                 encoder_attention_mask=extended_cond_mask
             )
         x = self.fc(x)
-        return x        
-
-    def get_extended_attention_mask(self, attention_mask):
-        if attention_mask is None:
-            return None
-        extended_attention_mask = attention_mask[:, None, None, :]
-        extended_attention_mask = (1.0 - extended_attention_mask) * torch.iinfo(attention_mask.dtype).min
-        return extended_attention_mask
+        return x
