@@ -11,7 +11,10 @@ class Decoder(nn.Module):
         self.num_hidden_layers = decoder_config.num_hidden_layers
 
         arch_config = deepcopy(diffusion_config)
-        arch_config.is_decoder = decoder_config.is_conditional
+        arch_config.is_conditional = decoder_config.is_conditional
+        arch_config.condition_type = decoder_config.condition_type
+        # arch_config.is_decoder = decoder_config.is_conditional
+        arch_config.is_decoder = False
         self.blocks = torch.nn.ModuleList(
             [BertBlock(arch_config) for _ in range(0, self.num_hidden_layers)]
         )

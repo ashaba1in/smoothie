@@ -85,7 +85,7 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
         if config.decoder.diffusion_forward:
             t = torch.cuda.FloatTensor(latent.shape[0]).uniform_() * (config.decoder.T - config.decoder.eps) + config.decoder.eps
             latent = dynamic.marginal(latent, t)["x_t"]
-        else:   
+        else:
             eps = torch.randn_like(latent) * config.decoder.noise_sigma
             latent = latent + eps
     with torch.no_grad():

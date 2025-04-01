@@ -570,7 +570,7 @@ class DiffusionRunner:
             loss = mse_loss(target, x_0, mask=None)
 
             per_t_losses.append(loss.item())
-            pred_tokens = self.decoder(x_0).argmax(-1)
+            pred_tokens = self.decoder(x_0, cond_x=src_x, cond_mask=batch.get("attention_mask_src")).argmax(-1)
             mask = batch['attention_mask_trg'].bool()
             accuracies.append((pred_tokens[mask] == batch["input_ids_trg"][mask]).float().mean().item())
             if self.config.cluster_diffusion:
@@ -869,12 +869,14 @@ class DiffusionRunner:
                 })
             else:
                 src_x = None
-           
+
             gen_text = self.generate_text_batch(
                 batch_size=len(batch["text_trg"]),
                 cond_x=src_x,
                 attention_mask=None,
+                cond_mask=batch.get("attention_mask_src")
             )[0]
+
 
             if dataset_name not in self.config.data.datasets.downstream_tasks:
                 result_dict["TRG"] += self.tokenizer.batch_decode(batch["input_ids_trg"], skip_special_tokens=True)
@@ -894,7 +896,7 @@ class DiffusionRunner:
         return result_dict
 
     @torch.no_grad()
-    def generate_text_batch(self, batch_size, cond_x=None, attention_mask=None, cond_mask=None, eps_t=0.0):
+    def generate_text_batch(self, batch_size, cond_x=None, attention_mask=None, cond_mask=None, eps_t=0.0, x=None):
         if attention_mask is not None:
             attention_mask = attention_mask.cuda()
 
@@ -904,6 +906,7 @@ class DiffusionRunner:
             cond_x=cond_x,
             cond_mask=cond_mask,
             eps_t=eps_t,
+            x=x
         )
 
         output = self.pred_logits(pred_embeddings, cond_x=cond_x, cond_mask=cond_mask)
@@ -932,9 +935,9 @@ class DiffusionRunner:
             pred_embeddings = self.gen_enc_normalizer.denormalize(pred_embeddings)
             if self.config.decoder.is_conditional and cond_x is not None:
                 cond_x = self.gen_enc_normalizer.denormalize(cond_x)
-        else:
-            cond_x = None
-            cond_mask = None
+        # else:
+        #     cond_x = None
+        #     cond_mask = None
         output = self.decoder(pred_embeddings, cond_x=cond_x, cond_mask=cond_mask)
         return output
 
@@ -946,6 +949,7 @@ class DiffusionRunner:
             cond_mask=None,
             attention_mask=None,
             eps_t=0.0,
+            x=None
     ) -> torch.Tensor:
         self.score_estimator.eval()
 
@@ -962,7 +966,8 @@ class DiffusionRunner:
                 self.encoder.encoder.config.hidden_size
             )
         with torch.no_grad():
-            x = self.dynamic.prior_sampling(shape).to(self.device)
+            if x is None:
+                x = self.dynamic.prior_sampling(shape).to(self.device)
             x_0_self_cond = torch.zeros(
                 *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
             )

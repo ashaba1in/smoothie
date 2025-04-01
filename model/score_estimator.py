@@ -12,8 +12,10 @@ class BertBlock(nn.Module):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = BertAttention(config)
+        self.is_decoder = config.is_conditional
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'cross-attention':
+        # if config.is_conditional:
             self.crossattention = BertAttention(config, position_embedding_type="absolute")
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
@@ -94,7 +96,7 @@ class TransformerEncoder(torch.nn.Module):
             time_emb = self.time_layers[i](emb_t)
             if self.condition_type == 'concatenation':
                 # don't add time embeddings to condition
-                time_emb = time_emb.unsqueeze(1).repeat(1, x.shape[1], 1)
+                time_emb = time_emb.repeat(1, x.shape[1], 1)
                 time_emb[:, self.max_sequence_len:] = 0
 
             x = x + time_emb
@@ -112,7 +114,7 @@ class TransformerEncoder(torch.nn.Module):
             time_emb = self.time_layers[ind](emb_t)
             if self.condition_type == 'concatenation':
                 # don't add time embeddings to condition
-                time_emb = time_emb.unsqueeze(1).repeat(1, x.shape[1], 1)
+                time_emb = time_emb.repeat(1, x.shape[1], 1)
                 time_emb[:, self.max_sequence_len:] = 0
             x = x + x_input_list.pop() + time_emb
             if self.use_self_cond:
@@ -168,7 +170,8 @@ class ScoreEstimatorEMB(nn.Module):
             self.sequence_embeddings = torch.nn.Embedding(2, self._hidden_layer_dim)
 
         if self.condition_type != 'concatenation':
-            self._max_position_embeddings = self.config.max_sequence_len
+            # self._max_position_embeddings = self.config.max_sequence_len
+            self._max_position_embeddings = self.config.max_position_embeddings
         else:
             self._max_position_embeddings = self.config.max_sequence_len + self.config.max_context_len
 
@@ -230,5 +233,5 @@ class ScoreEstimatorEMB(nn.Module):
             x_0_self_cond=x_0_self_cond,
         )
         if self.condition_type == 'concatenation':
-            return output[:, :self.config.max_sequence_len]
+            return output[:, :self.config.max_sequence_len].contiguous()
         return output

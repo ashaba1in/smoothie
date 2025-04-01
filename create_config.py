@@ -27,8 +27,8 @@ def create_config(args):
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.
     optim.linear_warmup = 5000 * training.accum_batch_steps
-    optim.lr = 2e-4
-    optim.min_lr = 2e-4
+    optim.lr = args.lr
+    optim.min_lr = args.lr
     optim.warmup_lr = 1e-8
     optim.weight_decay = 0.01
     optim.beta_1 = 0.9
@@ -102,6 +102,7 @@ def create_config(args):
     decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
     decoder.name += decoder.suffix
     decoder.is_conditional = config.is_conditional
+    decoder.condition_type = 'cross-attention'
     decoder.decoder_path = f"{data.base_path}/{data.datasets.datasets_list[0]}/{decoder.name}.pth"
     if decoder.max_sequence_len < data.max_sequence_len:
         raise Exception("Decoder max_sequence_len is less than required")

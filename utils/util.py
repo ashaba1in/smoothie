@@ -200,6 +200,7 @@ def parse():
     parser.add_argument("--sigma_min", type=float, default=5.0)
     parser.add_argument("--sigma_max", type=float, default=300.0)
     parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
+    parser.add_argument("--lr", type=float, default=2e-4, help='Learning rate')
     parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
     parser.add_argument(
         "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],
