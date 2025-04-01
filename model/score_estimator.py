@@ -24,7 +24,6 @@ class BertBlock(nn.Module):
         self.attention = BertAttention(config)
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'cross-attention':
-        # if config.is_conditional:
             self.crossattention = BertAttention(config, position_embedding_type="absolute")
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
@@ -97,7 +96,6 @@ class TransformerEncoder(torch.nn.Module):
             cond_mask=None,
             x_0_self_cond=None,
     ):
-
         x_input_list = []
 
         for i, block in enumerate(self.input_blocks):

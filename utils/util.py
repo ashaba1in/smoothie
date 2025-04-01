@@ -225,7 +225,9 @@ def parse():
     parser.add_argument(
         '--condition_encoder', type=str, default=None, choices=['transformer'], help='Encoder to process condition'
     )
-
+    parser.add_argument(
+        "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
+    )
     parser.add_argument(
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
     )

@@ -89,7 +89,7 @@ def create_config(args):
     config.finetuning = False
     config.seed = 0
     config.ddp = True
-    config.use_self_cond = False
+    config.use_self_cond = args.use_self_cond
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
     config.emb = args.emb
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
