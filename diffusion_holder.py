@@ -658,32 +658,31 @@ class DiffusionRunner:
         params = self.dynamic.marginal_params(t)
         if self.config.cluster_diffusion:
             # x_t is [bs, seq_len, V]
-            embeddings = self.encoder.embeddings
-            model_input = torch.softmax(x_t, dim=-1) @ embeddings
-            model_prediction = model(
-                x_t=model_input, time_t=t, cond=cond,
-                attention_mask=attention_mask, cond_mask=cond_mask,
-                x_0_self_cond=x_0_self_cond
+            model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+        else:
+            # x_t is [bs, seq_len, hidden_size]
+            model_input = x_t
+
+        model_prediction = model(
+            x_t=model_input, time_t=t, cond=cond,
+            attention_mask=attention_mask, cond_mask=cond_mask,
+            x_0_self_cond=x_0_self_cond
+        )
+
+        if not model.training and self.config.validation.cfg_coef and self.config.is_conditional:
+            null_pred = self.predict_x_0_unconditional(
+                model, x_t=model_input, t=t, attention_mask=attention_mask, x_0_self_cond=x_0_self_cond
             )
+            model_prediction = model_prediction + self.config.validation.cfg_coef * (model_prediction - null_pred)
+
+        if self.config.cluster_diffusion:
             x_0 = convert_to_simplex(
                 input_embeddings=model_prediction,
                 sigma_0=self.config.dynamic.sigma_min,
-                embeddings=embeddings,
+                embeddings=self.encoder.embeddings,
             )
         else:
-            # x_t is [bs, seq_len, hidden_size]
-            model_prediction = model(
-                x_t=x_t, time_t=t, cond=cond,
-                attention_mask=attention_mask, cond_mask=cond_mask,
-                x_0_self_cond=x_0_self_cond
-            )
             x_0 = model_prediction
-        
-        if not model.training and self.config.validation.cfg_coef and self.config.is_conditional:
-            x_0_null = self.predict_x_0_unconditional(
-                model, x_t=x_t, t=t, attention_mask=attention_mask, x_0_self_cond=x_0_self_cond
-            )
-            x_0 = x_0 + self.config.validation.cfg_coef * (x_0 - x_0_null)
 
         eps_theta = (x_t - params["mu"] * x_0) / params["std"]
         score = -eps_theta / params["std"]
