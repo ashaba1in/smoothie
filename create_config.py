@@ -111,6 +111,7 @@ def create_config(args):
     config.se_config.is_conditional = config.is_conditional
     config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_link).vocab_size
     config.se_config.use_self_cond = config.use_self_cond
+    config.se_config.self_cond_type = args.self_cond_type
     if 'A100' in torch.cuda.get_device_name(0) or 'V100' in torch.cuda.get_device_name(0):
         config.se_config._attn_implementation = 'sdpa'
     else:

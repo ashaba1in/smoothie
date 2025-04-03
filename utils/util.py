@@ -182,7 +182,6 @@ def convert_to_simplex(input_embeddings, sigma_0, embeddings):
     return result.view(*input_shape)
 
 
-
 def parse():
     parser = argparse.ArgumentParser(description="Dataset arguments")
     parser.add_argument(
@@ -227,6 +226,9 @@ def parse():
     )
     parser.add_argument(
         "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
+    )
+    parser.add_argument(
+        "--self_cond_type", type=bool, default='default', choices=['default', 'tess'], help='Type of self-conditioning'
     )
     parser.add_argument(
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'

@@ -4,8 +4,12 @@ import torch
 import torch.nn as nn
 import math
 from typing import Optional, Tuple
+
+from transformers import AutoModel
 from transformers.models.bert.modeling_bert import BertAttention, BertIntermediate, BertOutput, \
     apply_chunking_to_forward
+
+from utils.util import convert_to_simplex
 
 
 def get_extended_attention_mask(attention_mask, dtype):
@@ -79,7 +83,7 @@ class TransformerEncoder(torch.nn.Module):
         self.time_layers = torch.nn.ModuleList(
             [nn.Linear(self.hidden_size, self.hidden_size) for _ in range(0, self.num_hidden_layers)]
         )
-        if self.use_self_cond:
+        if self.use_self_cond and config.self_cond_type != 'tess':
             self.self_cond_layers = torch.nn.ModuleList(
                 [nn.Linear(self.hidden_size, self.hidden_size) for _ in range(0, self.num_hidden_layers)]
             )
@@ -107,7 +111,7 @@ class TransformerEncoder(torch.nn.Module):
                 time_emb[:, self.max_sequence_len:] = 0
 
             x = x + time_emb
-            if self.use_self_cond:
+            if self.use_self_cond and x_0_self_cond is not None:
                 x += self.self_cond_layers[i](x_0_self_cond)
             x = block(
                 hidden_states=x,
@@ -124,7 +128,7 @@ class TransformerEncoder(torch.nn.Module):
                 time_emb = time_emb.repeat(1, x.shape[1], 1)
                 time_emb[:, self.max_sequence_len:] = 0
             x = x + x_input_list.pop() + time_emb
-            if self.use_self_cond:
+            if self.use_self_cond and x_0_self_cond is not None:
                 x += self.self_cond_layers[ind](x_0_self_cond)
             x = block(
                 hidden_states=x,
@@ -206,6 +210,9 @@ class ScoreEstimatorEMB(nn.Module):
         self.register_buffer("position_ids", torch.arange(self._max_position_embeddings).expand((1, -1)))
         self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
 
+        if config.self_cond_type == 'tess':
+            self.embeddings = AutoModel.from_pretrained('bert-base-cased').embeddings.word_embeddings.weight.data.cpu()
+
     def forward(
             self,
             x_t: torch.Tensor,
@@ -229,6 +236,15 @@ class ScoreEstimatorEMB(nn.Module):
                 attention_mask=cond_mask,
                 dtype=x_t.dtype
             )
+
+        if self.use_self_cond and self.config.self_cond_type == 'tess':
+            self_cond_D = convert_to_simplex(
+                input_embeddings=x_0_self_cond,
+                sigma_0=self.config.dynamic.sigma_min,
+                embeddings=self.encoder.embeddings,
+            )
+            x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings)
+            x_0_self_cond = None
 
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
         hidden_t = self.time_emb(emb_t)
