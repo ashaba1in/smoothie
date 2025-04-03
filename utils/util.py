@@ -225,6 +225,10 @@ def parse():
         '--condition_encoder', type=str, default=None, choices=['transformer'], help='Encoder to process condition'
     )
     parser.add_argument(
+        '--decoder_condition_encoder', type=str, default=None,
+        choices=['transformer'], help='Encoder to process condition for decoder'
+    )
+    parser.add_argument(
         "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
     )
     parser.add_argument(

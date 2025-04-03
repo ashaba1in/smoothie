@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from copy import deepcopy
-from .score_estimator import BertBlock, get_extended_attention_mask
+from .score_estimator import BertBlock, get_extended_attention_mask, ConditionEncoder
 
 
 class Decoder(nn.Module):
@@ -18,8 +18,16 @@ class Decoder(nn.Module):
         )
         self.fc = nn.Linear(arch_config.hidden_size, arch_config.vocab_size)
 
+        if decoder_config.condition_encoder == 'transformer':
+            self.condition_encoder = ConditionEncoder(diffusion_config, num_hidden_layers=3)
+        else:
+            self.condition_encoder = nn.Identity()
+
     def forward(self, x, cond_x=None, cond_mask=None):
         extended_cond_mask = get_extended_attention_mask(cond_mask, x.dtype)
+        if cond_x is not None:
+            cond_x = self.condition_encoder(cond_x, extended_cond_mask)
+
         for _, block in enumerate(self.blocks):
             x = block(
                 hidden_states=x,
