@@ -83,10 +83,11 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
         dynamic = DynamicSDE(config=config)
 
         if config.decoder.diffusion_forward:
-            t = torch.cuda.FloatTensor(latent.shape[0]).uniform_() * (config.decoder.T - config.decoder.eps) + config.decoder.eps
+            t = torch.randn(latent.shape[0], device=latent.device) * (config.decoder.T - config.decoder.eps) + config.decoder.eps
             latent = dynamic.marginal(latent, t)["x_t"]
         else:
-            eps = torch.randn_like(latent) * config.decoder.noise_sigma
+            t = torch.randn(latent.shape[0], device=latent.device)
+            eps = torch.randn_like(latent) * config.decoder.noise_sigma * t
             latent = latent + eps
     with torch.no_grad():
         if not config.emb:

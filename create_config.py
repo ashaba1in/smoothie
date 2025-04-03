@@ -182,7 +182,7 @@ def create_decoder_config():
     config = ml_collections.ConfigDict()
 
     config.max_sequence_len = 128
-    config.noise_sigma = 0.2
+    config.noise_sigma = 0.5
     config.lr = 1e-4
     config.betas = (0.9, 0.98)
     config.weight_decay = 0.001
