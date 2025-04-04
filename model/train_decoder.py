@@ -82,10 +82,10 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
     if not eval:
         if config.decoder.diffusion_forward:
             dynamic = DynamicSDE(config=config)
-            t = torch.randn(latent.shape[0], device=latent.device) * (config.decoder.T - config.decoder.eps) + config.decoder.eps
+            t = torch.rand(latent.shape[0], device=latent.device) * (config.decoder.T - config.decoder.eps) + config.decoder.eps
             latent = dynamic.marginal(latent, t)["x_t"]
         else:
-            t = torch.randn(latent.shape[0], 1, 1, device=latent.device)
+            t = torch.rand(latent.shape[0], 1, 1, device=latent.device)
             noise = torch.randn_like(latent) * config.decoder.noise_sigma * t
             latent = latent + noise
     with torch.no_grad():
