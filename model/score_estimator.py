@@ -240,7 +240,7 @@ class ScoreEstimatorEMB(nn.Module):
         if self.use_self_cond and self.config.self_cond_type == 'tess':
             self_cond_D = convert_to_simplex(
                 input_embeddings=x_0_self_cond,
-                sigma_0=self.config.dynamic.sigma_min,
+                sigma_0=self.config.sigma_min,
                 embeddings=self.encoder.embeddings,
             )
             x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings)
