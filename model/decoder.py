@@ -21,7 +21,7 @@ class Decoder(nn.Module):
         if decoder_config.condition_encoder == 'transformer':
             self.condition_encoder = ConditionEncoder(diffusion_config, num_hidden_layers=3)
         else:
-            self.condition_encoder = nn.Identity()
+            self.condition_encoder = lambda *x: x[0]
 
     def forward(self, x, cond_x=None, cond_mask=None):
         extended_cond_mask = get_extended_attention_mask(cond_mask, x.dtype)
