@@ -211,7 +211,7 @@ class ScoreEstimatorEMB(nn.Module):
         self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
 
         if config.self_cond_type == 'tess':
-            self.embeddings = AutoModel.from_pretrained('bert-base-cased').embeddings.word_embeddings.weight.data.cpu()
+            self.embeddings = AutoModel.from_pretrained('bert-base-cased').embeddings.word_embeddings.weight.data
 
     def forward(
             self,
@@ -241,9 +241,9 @@ class ScoreEstimatorEMB(nn.Module):
             self_cond_D = convert_to_simplex(
                 input_embeddings=x_0_self_cond,
                 sigma_0=self.config.sigma_min,
-                embeddings=self.embeddings,
+                embeddings=self.embeddings.to(x_0_self_cond.device),
             )
-            x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings)
+            x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings.to(self_cond_D.device))
             x_0_self_cond = None
 
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
