@@ -241,7 +241,7 @@ class ScoreEstimatorEMB(nn.Module):
             self_cond_D = convert_to_simplex(
                 input_embeddings=x_0_self_cond,
                 sigma_0=self.config.sigma_min,
-                embeddings=self.encoder.embeddings,
+                embeddings=self.embeddings,
             )
             x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings)
             x_0_self_cond = None
