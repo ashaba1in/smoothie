@@ -232,7 +232,7 @@ def parse():
         "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
     )
     parser.add_argument(
-        "--self_cond_type", type=bool, default='default', choices=['default', 'tess'], help='Type of self-conditioning'
+        "--self_cond_type", type=str, default='default', choices=['default', 'tess'], help='Type of self-conditioning'
     )
     parser.add_argument(
         "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
