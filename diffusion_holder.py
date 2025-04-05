@@ -150,6 +150,8 @@ class DiffusionRunner:
                     pg['weight_decay'] = self.config.optim.weight_decay
                     pg['lr'] = self.config.optim.lr
 
+                self.scheduler.lr_min = self.config.optim.lr
+
                 if self.config.is_conditional:
                     self.estimate("validation")
                 self.estimate("test")
@@ -396,6 +398,7 @@ class DiffusionRunner:
             )
 
         self.log_metric('lr', 'train', self.optimizer.param_groups[0]['lr'])
+        self.log_metric('weight_decay', 'train', self.optimizer.param_groups[0]['weight_decay'])
         self.grad_scaler.step(self.optimizer)
         self.grad_scaler.update()
 
