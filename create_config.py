@@ -30,7 +30,7 @@ def create_config(args):
     optim.lr = args.lr
     optim.min_lr = args.lr
     optim.warmup_lr = 1e-8
-    optim.weight_decay = 0.01
+    optim.weight_decay = args.wd
     optim.beta_1 = 0.9
     optim.beta_2 = 0.98
     optim.eps = 1e-6
