@@ -146,6 +146,10 @@ class DiffusionRunner:
             self.step = 0
             
             if self.load_checkpoint():
+                for pg in self.optimizer.param_groups:
+                    pg['weight_decay'] = self.config.optim.weight_decay
+                    pg['lr'] = self.config.optim.lr
+
                 if self.config.is_conditional:
                     self.estimate("validation")
                 self.estimate("test")
