@@ -197,6 +197,9 @@ class ScoreEstimatorEMB(nn.Module):
         if config.condition_encoder == 'transformer':
             self.condition_encoder = ConditionEncoder(config, num_hidden_layers=6)
 
+        if self.use_self_cond and config.self_cond_type != 'tess':
+            self.self_condition_encoder = ConditionEncoder(config, num_hidden_layers=3)
+
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'concatenation':
             self.sequence_embeddings = torch.nn.Embedding(2, self._hidden_layer_dim)
@@ -237,14 +240,17 @@ class ScoreEstimatorEMB(nn.Module):
                 dtype=x_t.dtype
             )
 
-        if self.use_self_cond and self.config.self_cond_type == 'tess':
-            self_cond_D = convert_to_simplex(
-                input_embeddings=x_0_self_cond,
-                sigma_0=self.config.sigma_min,
-                embeddings=self.embeddings.to(x_0_self_cond.device),
-            )
-            x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings.to(self_cond_D.device))
-            x_0_self_cond = None
+        if self.use_self_cond:
+            if self.config.self_cond_type == 'tess':
+                self_cond_D = convert_to_simplex(
+                    input_embeddings=x_0_self_cond,
+                    sigma_0=self.config.sigma_min,
+                    embeddings=self.embeddings.to(x_0_self_cond.device),
+                )
+                x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings.to(self_cond_D.device))
+                x_0_self_cond = None
+            else:
+                x_0_self_cond = self.self_condition_encoder(x_0_self_cond)
 
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
         hidden_t = self.time_emb(emb_t)
