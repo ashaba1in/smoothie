@@ -133,6 +133,8 @@ def create_config(args):
         if training.step_unrolled:
             pref += '_step_unrolled'
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}-{os.environ.get('SLURM_JOB_ID')}"
+    # training.checkpoints_prefix = f"cluster_delta1.0_min1.5_max200.0_d6.0-xsum-cond_encoder-2548668"
+
     config.eval = False
 
     config.tracked_dataset = data.datasets.datasets_list[0]
