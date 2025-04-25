@@ -63,7 +63,7 @@ def get_loaders(train_dataset, valid_dataset, batch_size):
 def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
     trg = tokenizer(
             batch['text_trg'],
-            add_special_tokens=True,
+            add_special_tokens=config.data.add_special_tokens,
             padding="max_length",
             truncation=True,
             max_length=config.decoder.max_sequence_len,
@@ -95,7 +95,7 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
     if config.decoder.is_conditional:
         src = tokenizer(
             batch['text_src'],
-            add_special_tokens=True,
+            add_special_tokens=config.data.add_special_tokens,
             padding=True,
             truncation=True,
             max_length=config.decoder.max_sequence_len,

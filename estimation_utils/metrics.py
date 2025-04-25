@@ -130,6 +130,12 @@ def compute_rouge(predictions, references):
     result = rouge.compute(predictions=predictions, references=references)
     return result
 
+def compute_sari(predictions, references):
+    torch.cuda.empty_cache()
+
+    sari = load('sari')
+    result = sari.compute(predictions=predictions, references=references)
+    return result
 
 def compute_bert_score(predictions, references):
     torch.cuda.empty_cache()

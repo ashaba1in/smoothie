@@ -165,10 +165,6 @@ def get_stat(z, mask):
 
 @torch.no_grad()
 def convert_to_simplex(input_embeddings, sigma_0, embeddings):
-    # if input_embeddings is None:
-    #     input_shape = (*token_ids.shape, -1)
-    #     input_embeds = embeddings[token_ids.view(-1)]
-    # else:
     input_shape = (*input_embeddings.shape[:-1], -1)
     input_embeds = input_embeddings.view(-1, input_embeddings.shape[-1])
 
@@ -207,10 +203,10 @@ def parse():
         help='Sets dimensions for aggregation of embeddings values'
     )
     parser.add_argument(
-        "--embeddings_path", type=str, default=None, help='Path to file with embedding matrix'
+        "--add_special_tokens", type=bool, default=False, help='If set, add special tokens during tokenization'
     )
     parser.add_argument(
-        "--cluster_diffusion", type=bool, default=False, help='If set, use clusterization-like noising'
+        "--embeddings_path", type=str, default=None, help='Path to file with embedding matrix'
     )
     parser.add_argument(
         "--encoder_name", type=str, default='bert-base-cased',
@@ -228,6 +224,9 @@ def parse():
     parser.add_argument(
         '--decoder_condition_encoder', type=str, default=None,
         choices=['transformer'], help='Encoder to process condition for decoder'
+    )
+    parser.add_argument(
+        "--cluster_diffusion", type=bool, default=False, help='If set, use clusterization-like noising'
     )
     parser.add_argument(
         "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'

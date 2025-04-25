@@ -2,18 +2,6 @@ from typing import List, Union, Optional, Dict, Any
 import torch
 from collections import UserDict
 
-def tokenize(batch_texts: List[str], tokenizer, max_length):
-    X = tokenizer(
-        batch_texts,
-        add_special_tokens=True,
-        padding="max_length",
-        truncation=True,
-        max_length=max_length,
-        return_tensors="pt",
-        return_attention_mask=True,
-        return_token_type_ids=False,
-    )
-    return X
 
 class BatchEncoding(UserDict):
     def __init__(self, data: Optional[Dict[str, Any]] = None, return_tp="pt"):

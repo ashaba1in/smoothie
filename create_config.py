@@ -81,6 +81,7 @@ def create_config(args):
     data.base_path = f"{config.work_dir}/datasets"
     data.max_sequence_len = get_sequence_len(data.datasets.datasets_list[0])
     data.max_context_len = get_context_len(data.datasets.datasets_list[0])
+    data.add_special_tokens = args.add_special_tokens
     data.path = ""
     data.swap_cfg_coef = args.swap_cfg_coef
     data.enc_gen_mean = f"{data.base_path}/{data.datasets.datasets_list[0]}/statistics/encodings-{model.encoder_name_hash}-mean.pt"

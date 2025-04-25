@@ -47,7 +47,7 @@ def compute_mean_std(
     for i, batch in enumerate(T):
         trg = tokenizer(
             batch['text_trg'],
-            add_special_tokens=True,
+            add_special_tokens=config.data.add_special_tokens,
             padding="max_length",
             truncation=True,
             max_length=config.data.max_sequence_len,
