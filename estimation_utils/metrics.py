@@ -12,7 +12,7 @@ import numpy as np
 from utils.util import dict_to_device
 
 
-def compute_metric(metric_name, predictions, references, **kwargs):
+def compute_metric(metric_name, predictions, references, sources=None, **kwargs):
     if metric_name == "mauve":
         return compute_mauve(predictions=predictions, references=references)
     elif metric_name == "div":
@@ -25,6 +25,8 @@ def compute_metric(metric_name, predictions, references, **kwargs):
         return compute_bert_score(predictions=predictions, references=references)
     elif metric_name == "bleu":
         return compute_bleu(predictions=predictions, references=references)
+    elif metric_name == "sari":
+        return compute_sari(sources=sources, predictions=predictions, references=references)
     elif metric_name == "ppl":
         return compute_ppl(predictions=predictions)
     else:
@@ -130,12 +132,12 @@ def compute_rouge(predictions, references):
     result = rouge.compute(predictions=predictions, references=references)
     return result
 
-def compute_sari(predictions, references):
+def compute_sari(sources, predictions, references):
     torch.cuda.empty_cache()
 
     sari = load('sari')
-    result = sari.compute(predictions=predictions, references=references)
-    return result
+    result = sari.compute(sources=sources, predictions=predictions, references=references)
+    return result['sari']
 
 def compute_bert_score(predictions, references):
     torch.cuda.empty_cache()

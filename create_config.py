@@ -156,7 +156,7 @@ def create_se_config():
 
 def create_datasets_config(args):
     config = ml_collections.ConfigDict()
-    config.downstream_tasks = ["qqp", "xsum", "paradetox", "wiki_auto"]
+    config.downstream_tasks = ["qqp", "xsum", "paradetox", "wiki_auto", "newsela_auto", "quasar_t"]
     if args.dataset_name is None:
         config.datasets_list = ["rocstories"]
     else:
@@ -177,6 +177,14 @@ def create_datasets_config(args):
         "wiki_auto": {
             "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
             "tracked_metric": "bert-score",
+        },
+        "newsela_auto": {
+            "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL", "sari"],
+            "tracked_metric": "sari",
+        },
+        "quasar_t": {
+            "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
+            "tracked_metric": "sari",
         },
     }
     return config
@@ -211,6 +219,8 @@ def get_sequence_len(dataset_name):
         "qqp": 50,
         "xsum": 64,
         "wiki_auto": 100,
+        "newsela_auto": 80,
+        "quasar_t": 50,
     }
     return data[dataset_name]
 
@@ -222,5 +232,7 @@ def get_context_len(dataset_name):
         "qqp": 50,
         "xsum": 512,
         "wiki_auto": 100,
+        "newsela_auto": 100,
+        "quasar_t": 100,
     }
     return data[dataset_name]
