@@ -30,6 +30,16 @@ def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
             "text_trg": batch["target"],
             "references": batch["references"],
         }
+    elif dataset_name == "newsela_auto":
+        new_batch = {
+            "text_src": batch["src"],
+            "text_trg": batch["trg"],
+        }
+    elif dataset_name == "quasar_t":
+        new_batch = {
+            "text_src": batch["src"],
+            "text_trg": batch["trg"],
+        }
     elif dataset_name == "rocstories":
         new_batch = {
             "text_trg": batch["target"],
