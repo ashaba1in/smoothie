@@ -888,13 +888,13 @@ class DiffusionRunner:
                 cond_mask=batch.get("attention_mask_src")
             )[0]
 
-            if dataset_name not in self.config.data.datasets.downstream_tasks:
-                result_dict["TRG"] += self.tokenizer.batch_decode(batch["input_ids_trg"], skip_special_tokens=True)
-            else:
-                if "text_references" in batch:
-                    result_dict["TRG"] += batch["text_references"]
-                else:
-                    result_dict["TRG"] += batch["text_trg"]
+            # if dataset_name not in self.config.data.datasets.downstream_tasks:
+            result_dict["TRG"] += self.tokenizer.batch_decode(batch["input_ids_trg"], skip_special_tokens=True)
+            # else:
+            #     if "text_references" in batch:
+            #         result_dict["TRG"] += batch["text_references"]
+            #     else:
+            #         result_dict["TRG"] += batch["text_trg"]
                 
             result_dict["GEN"] += gen_text
             if self.config.is_conditional:

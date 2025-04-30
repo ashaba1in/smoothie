@@ -28,7 +28,7 @@ def compute_metric(metric_name, predictions, references, sources=None, **kwargs)
     elif metric_name == "bleu":
         return compute_bleu(predictions=predictions, references=references)
     elif metric_name == "sari":
-        return compute_sari(sources=sources, predictions=predictions, references=references)
+        return compute_sari(sources=sources, predictions=predictions, references=[[x] for x in references])
     elif metric_name == "ppl":
         return compute_ppl(predictions=predictions)
     else:
