@@ -1074,9 +1074,9 @@ class DiffusionRunner:
 
             for metric_name in self.config.data.datasets.metrics[dataset_name]["metrics"]:
                 metrics_dict[dataset_name][metric_name] = compute_metric(
-                    metric_name, 
-                    predictions=texts_gen, 
-                    references=texts_trg, 
+                    metric_name,
+                    predictions=texts_gen,
+                    references=texts_trg,
                     sources=texts_src
                 )
 

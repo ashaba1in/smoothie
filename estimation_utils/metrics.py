@@ -17,6 +17,8 @@ def compute_metric(metric_name, predictions, references, sources=None, **kwargs)
         return compute_mauve(predictions=predictions, references=references)
     elif metric_name == "div":
         return compute_diversity(all_texts_list=predictions)['diversity']
+    elif metric_name.startswith("div"):
+        return distinct_n_grams(texts=predictions, n=int(metric_name[-1]))
     elif metric_name == "mem":
         return compute_memorization(all_texts_list=predictions, human_references=references)
     elif metric_name.startswith("rouge"):
@@ -107,6 +109,23 @@ def compute_diversity(all_texts_list):
     return metrics
 
 
+def distinct_n_grams(texts, n=1):
+    """Computes the average distinct n-grams of the generated texts.
+    Args:
+        texts (list of str): representing the generated texts.
+        n (int): n-gram length
+    """
+    dist = []
+    for text in texts:
+        total_words = len(text.split())
+        n_grams = set(ngrams(text.split(), n))
+        if total_words == 0:
+            dist.append(0)
+        else:
+            dist.append(len(n_grams) / total_words)
+    return np.nanmean(dist)
+
+
 def compute_memorization(all_texts_list, human_references, n=4):
     tokenizer = spacy.load("en_core_web_sm").tokenizer
     unique_four_grams = set()
@@ -129,7 +148,7 @@ def compute_rouge(predictions, references):
     torch.cuda.empty_cache()
 
     rouge = load('rouge')
-    result = rouge.compute(predictions=predictions, references=references)
+    result = rouge.compute(predictions=predictions, references=references, use_stemmer=True)
     return result
 
 def compute_sari(sources, predictions, references):

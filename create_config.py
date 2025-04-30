@@ -167,24 +167,24 @@ def create_datasets_config(args):
         "wikipedia": {"metrics": ["mauve", "div", "ppl"],
                       "tracked_metric": "mauve"},
         "qqp": {
-            "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
+            "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
             "tracked_metric": "bert-score",
         },
         "xsum": {
             "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
-            "tracked_metric": "bert-score",
+            "tracked_metric": "rougeL",
         },
         "wiki_auto": {
             "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
             "tracked_metric": "bert-score",
         },
         "newsela_auto": {
-            "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL", "sari"],
+            "metrics": ["sari", "bleu", "bert-score", "rougeL"],
             "tracked_metric": "sari",
         },
         "quasar_t": {
-            "metrics": ["bleu", "bert-score", "rouge1", "rouge2", "rougeL"],
-            "tracked_metric": "sari",
+            "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
+            "tracked_metric": "bert-score",
         },
     }
     return config
