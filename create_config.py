@@ -216,8 +216,9 @@ def get_sequence_len(dataset_name):
     data = {
         "wikipedia": 128,
         "rocstories": 80,
-        "qqp": 50,
-        "xsum": 64,
+        "qqp": 85,
+        "xsum": 120,
+        # "xsum": 64,
         "wiki_auto": 100,
         "newsela_auto": 128,
         "quasar_t": 50,
@@ -229,8 +230,9 @@ def get_context_len(dataset_name):
     data = {
         "wikipedia": 128,
         "rocstories": 80,
-        "qqp": 50,
-        "xsum": 512,
+        "qqp": 100,
+        "xsum": 392,
+        # "xsum": 512,
         "wiki_auto": 100,
         "newsela_auto": 128,
         "quasar_t": 100,
