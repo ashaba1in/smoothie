@@ -864,6 +864,7 @@ class DiffusionRunner:
             num_workers=20,
             batch_size=self.config.validation.batch_size,
             collate_fn=self.collate_fn,
+            shuffle=False,
         )
 
         result_dict = {
@@ -988,33 +989,33 @@ class DiffusionRunner:
                 self.config.data.max_sequence_len,
                 self.encoder.encoder.config.hidden_size
             )
-        with torch.no_grad():
-            if x is None:
-                x = self.dynamic.prior_sampling(shape).to(self.device)
-            x_0_self_cond = torch.zeros(
-                *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
+
+        if x is None:
+            x = self.dynamic.prior_sampling(shape).to(self.device)
+        x_0_self_cond = torch.zeros(
+            *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
+        )
+
+        timesteps = torch.linspace(self.dynamic.T, eps_t, self.dynamic.N + 1, device=self.device)
+        for idx in tqdm(range(self.dynamic.N)):
+            t = timesteps[idx]
+            next_t = timesteps[idx + 1]
+
+            input_t = t * torch.ones(shape[0], device=self.device)
+            next_input_t = next_t * torch.ones(shape[0], device=self.device)
+
+            output = self.diff_eq_solver.step(
+                x_t=x, t=input_t, next_t=next_input_t,
+                cond=cond_x,
+                cond_mask=cond_mask,
+                attention_mask=attention_mask,
+                x_0_self_cond=x_0_self_cond,
             )
 
-            timesteps = torch.linspace(self.dynamic.T, eps_t, self.dynamic.N + 1, device=self.device)
-            for idx in tqdm(range(self.dynamic.N)):
-                t = timesteps[idx]
-                next_t = timesteps[idx + 1]
+            x = output["x"]
+            x_0_self_cond = output["latent_pred"]
 
-                input_t = t * torch.ones(shape[0], device=self.device)
-                next_input_t = next_t * torch.ones(shape[0], device=self.device)
-
-                output = self.diff_eq_solver.step(
-                    x_t=x, t=input_t, next_t=next_input_t,
-                    cond=cond_x,
-                    cond_mask=cond_mask,
-                    attention_mask=attention_mask,
-                    x_0_self_cond=x_0_self_cond,
-                )
-
-                x = output["x"]
-                x_0_self_cond = output["latent_pred"]
-
-            pred_embeddings = output["latent_pred"]
+        pred_embeddings = output["latent_pred"]
 
         return pred_embeddings
 
