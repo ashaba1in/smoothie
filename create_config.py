@@ -132,8 +132,6 @@ def create_config(args):
         pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'cluster_sd':
         pref = f"cluster_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
-        if training.step_unrolled:
-            pref += '_step_unrolled'
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}-{os.environ.get('SLURM_JOB_ID')}"
     # training.checkpoints_prefix = f"cluster_delta1.0_min1.5_max200.0_d6.0-xsum-cond_encoder-2548668"
 
@@ -144,8 +142,6 @@ def create_config(args):
     config.higher_better = True
     config.save_top_k = 2
 
-    if config.use_self_cond and config.training.step_unrolled:
-        raise Exception('Can use both self-conditioning and step-unrolling')
     return config
 
 
