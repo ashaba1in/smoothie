@@ -216,6 +216,9 @@ class ScoreEstimatorEMB(nn.Module):
         if config.self_cond_type == 'tess':
             self.embeddings = AutoModel.from_pretrained('bert-base-cased').embeddings.word_embeddings.weight.data
 
+        if self.config.predict_tokens:
+            self.head = nn.Linear(self.config.hidden_size, self.config.vocab_size)
+
     def forward(
             self,
             x_t: torch.Tensor,
@@ -281,5 +284,9 @@ class ScoreEstimatorEMB(nn.Module):
             x_0_self_cond=x_0_self_cond,
         )
         if self.condition_type == 'concatenation':
-            return output[:, :self.config.max_sequence_len].contiguous()
+            output = output[:, :self.config.max_sequence_len].contiguous()
+
+        if self.config.predict_tokens:
+            output = self.head(output)
+
         return output

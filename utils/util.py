@@ -235,7 +235,7 @@ def parse():
         "--self_cond_type", type=str, default='default', choices=['default', 'tess'], help='Type of self-conditioning'
     )
     parser.add_argument(
-        "--step_unrolled", type=bool, default=False, help='If set, use step-unrolling training'
+        "--predict_tokens", type=bool, default=False, help='If set, predict logits instead of embeddings'
     )
     parser.add_argument(
         "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'

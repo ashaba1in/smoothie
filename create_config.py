@@ -19,7 +19,6 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
-    training.step_unrolled = args.step_unrolled
     training.train_embeddings = args.train_embeddings
     training.x_T_coef = args.x_T_coef
     training.nll_coef = args.nll_coef
@@ -97,6 +96,7 @@ def create_config(args):
     config.embeddings_path = args.embeddings_path
     config.cluster_diffusion = args.cluster_diffusion
     config.random_init_embeddings = args.random_init_embeddings
+    config.predict_tokens = args.predict_tokens
 
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]
@@ -114,6 +114,7 @@ def create_config(args):
     config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_link).vocab_size
     config.se_config.use_self_cond = config.use_self_cond
     config.se_config.self_cond_type = args.self_cond_type
+    config.se_config.predict_tokens = config.predict_tokens
     if 'A100' in torch.cuda.get_device_name(0) or 'V100' in torch.cuda.get_device_name(0):
         config.se_config._attn_implementation = 'sdpa'
     else:
