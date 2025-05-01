@@ -126,6 +126,7 @@ class DiffusionRunner:
 
         # Checkpoint utils
         self.all_checkpoints = []
+        self.last_checkpoint = None
         self.tracked_test_metric = dict()  # step -- metric value
 
         if self.config.ddp and dist.get_rank() == 0 and run_wandb:
@@ -205,16 +206,20 @@ class DiffusionRunner:
             heapq.heappush(self.all_checkpoints, item)
             return
 
-        if self.config.save_top_k is None or self.config.save_top_k > len(self.all_checkpoints):
-            self.__save_checkpoint(save_path)
-            heapq.heappush(self.all_checkpoints, item)
-        else:
+        if self.config.save_top_k is not None and len(self.all_checkpoints) >= self.config.save_top_k:
             heap_smallest = self.all_checkpoints[0]
             if heap_smallest[0] < item[0]:
                 self.__remove_checkpoint(heap_smallest[1])
                 heapq.heappop(self.all_checkpoints)
-                self.__save_checkpoint(item[1])
                 heapq.heappush(self.all_checkpoints, item)
+        else:
+            heapq.heappush(self.all_checkpoints, item)
+
+        self.__save_checkpoint(save_path)
+        if self.last_checkpoint is not None and self.last_checkpoint not in self.all_checkpoints:
+            self.__remove_checkpoint(self.last_checkpoint[1])
+
+        self.last_checkpoint = item
 
     def __remove_checkpoint(self, save_path):
         os.remove(save_path)
