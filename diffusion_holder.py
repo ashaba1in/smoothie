@@ -848,7 +848,7 @@ class DiffusionRunner:
             for key in target_dict:
                 stat_dict[f"clean_x_{key}"] = target_dict[key]
     
-            x_0_dict = get_stat(x_0.detach(), mask)
+            x_0_dict = get_stat(model_output.detach(), mask)
             for key in x_0_dict:
                 stat_dict[f"x_0_{key}"] = x_0_dict[key]
     
@@ -857,9 +857,9 @@ class DiffusionRunner:
             for key in target_dict_SPT:
                 stat_dict[f"clean_x_woSPT_{key}"] = target_dict_SPT[key]
     
-            x_0_dict_SPT = get_stat(x_0, mask)
-            for key in x_0_dict_SPT:
-                stat_dict[f"x_0_woSPT_{key}"] = x_0_dict_SPT[key]
+            # x_0_dict_SPT = get_stat(model_output, mask)
+            # for key in x_0_dict_SPT:
+            #     stat_dict[f"x_0_woSPT_{key}"] = x_0_dict_SPT[key]
 
         return loss_dict, stat_dict
 
