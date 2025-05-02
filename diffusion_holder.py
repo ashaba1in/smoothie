@@ -593,7 +593,10 @@ class DiffusionRunner:
 
             per_t_losses.append(loss.item())
             # pred_tokens = self.decoder(x_0, cond_x=src_x, cond_mask=batch.get("attention_mask_src")).argmax(-1)
-            pred_tokens = self.decode(x_0)
+            if self.config.predict_tokens:
+                pred_tokens = model_output.argmax(-1)
+            else:
+                pred_tokens = self.decode(model_output)
             mask = batch['attention_mask_trg'].bool()
             accuracies.append((pred_tokens[mask] == batch["input_ids_trg"][mask]).float().mean().item())
             if self.config.cluster_diffusion:
@@ -847,10 +850,11 @@ class DiffusionRunner:
             target_dict = get_stat(target, mask)
             for key in target_dict:
                 stat_dict[f"clean_x_{key}"] = target_dict[key]
-    
-            x_0_dict = get_stat(model_output.detach(), mask)
-            for key in x_0_dict:
-                stat_dict[f"x_0_{key}"] = x_0_dict[key]
+
+            if not self.config.predict_tokens:
+                x_0_dict = get_stat(model_output.detach(), mask)
+                for key in x_0_dict:
+                    stat_dict[f"x_0_{key}"] = x_0_dict[key]
     
             mask = batch["attention_mask_trg"]
             target_dict_SPT = get_stat(target, mask)
