@@ -97,6 +97,7 @@ def create_config(args):
     config.cluster_diffusion = args.cluster_diffusion
     config.random_init_embeddings = args.random_init_embeddings
     config.predict_tokens = args.predict_tokens
+    config.clamp = False
 
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]
