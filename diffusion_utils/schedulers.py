@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
 
 
 def create_scheduler(config):
@@ -14,6 +14,8 @@ def create_scheduler(config):
         return ClusterCosineSD(
             config.dynamic.coef_d, config.dynamic.delta, config.dynamic.sigma_min, config.dynamic.sigma_max
         )
+    elif config.dynamic.scheduler == 'tess':
+        return TessScheduler(config.dynamic.simplex_value)
 
 
 class Scheduler(metaclass=ABCMeta):
@@ -76,7 +78,7 @@ class Sqrt(Scheduler):
 
     def params(self, t):
         t = t[:, None, None]
-        
+
         alpha = 1 - torch.sqrt(t + self.s)
         alpha = torch.clip(alpha, 0, 1)
         mu = torch.sqrt(alpha)
@@ -119,4 +121,24 @@ class ClusterCosineSD(Scheduler):
         t = t[:, None, None]
         alpha_t = 1 / self.sigma_bar(t)**4
         std_t = self.delta * torch.sqrt(1 - alpha_t)
+        return torch.sqrt(alpha_t), std_t
+
+
+class TessScheduler(Scheduler, ABC):
+    def __init__(self, simplex_value):
+        self.simplex_value = simplex_value
+
+    def alpha_t(self, t):
+        # t in [0, 1]
+        def default_alpha_bar(time_step):
+            return torch.cos((time_step + 1e-4) / (1 + 1e-4) * np.pi / 2) ** 2
+
+        alpha_bar = default_alpha_bar(t) / default_alpha_bar(0.0)
+        return alpha_bar
+
+    def params(self, t):
+        t = t[:, None, None]
+        alpha_t = self.alpha_t(t)
+        std_t = self.simplex_value * (1 - alpha_t) ** 0.5
+
         return torch.sqrt(alpha_t), std_t

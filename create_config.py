@@ -19,7 +19,6 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
-    training.train_embeddings = args.train_embeddings
     training.x_T_coef = args.x_T_coef
     training.nll_coef = args.nll_coef
 
@@ -51,6 +50,7 @@ def create_config(args):
     dynamic.delta = args.delta
     dynamic.sigma_min = args.sigma_min
     dynamic.sigma_max = args.sigma_max
+    dynamic.simplex_value = args.simplex_value
 
     model = config.model = ml_collections.ConfigDict()
     model.ema_rate = 0.9999
@@ -95,9 +95,13 @@ def create_config(args):
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
     config.cluster_diffusion = args.cluster_diffusion
+    config.tess_diffusion = args.cluster_diffusion
     config.random_init_embeddings = args.random_init_embeddings
     config.predict_tokens = args.predict_tokens
     config.clamp = False
+
+    if config.tess_diffusion:
+        assert config.predict_tokens, 'We can predict only tokens when using TESS'
 
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]

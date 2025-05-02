@@ -6,6 +6,7 @@ from copy import deepcopy
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 from torch.nn.functional import cross_entropy
+import torch.nn.functional as F
 
 
 def set_seed(seed: int = 0):
@@ -178,6 +179,10 @@ def convert_to_simplex(input_embeddings, sigma_0, embeddings):
     return result.view(*input_shape)
 
 
+def convert_to_tess_simplex(token_ids, simplex_value, vocab_size):
+    return 2 * simplex_value * F.one_hot(token_ids, vocab_size) - simplex_value
+
+
 def parse():
     parser = argparse.ArgumentParser(description="Dataset arguments")
     parser.add_argument(
@@ -193,7 +198,7 @@ def parse():
     parser.add_argument("--coef_d", type=float, default=9)
     parser.add_argument("--delta", type=float, default=0.25)
     parser.add_argument("--sigma_min", type=float, default=5.0)
-    parser.add_argument("--sigma_max", type=float, default=300.0)
+    parser.add_argument("--simplex_value", type=float, default=5.0, help='k in TESS paper')
     parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
     parser.add_argument("--lr", type=float, default=2e-4, help='Learning rate')
     parser.add_argument("--wd", type=float, default=0.01, help='Weight decay')
@@ -229,6 +234,9 @@ def parse():
         "--cluster_diffusion", type=bool, default=False, help='If set, use clusterization-like noising'
     )
     parser.add_argument(
+        "--tess_diffusion", type=bool, default=False, help='If set, use tess diffusion process'
+    )
+    parser.add_argument(
         "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
     )
     parser.add_argument(
@@ -239,9 +247,6 @@ def parse():
     )
     parser.add_argument(
         "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'
-    )
-    parser.add_argument(
-        "--train_embeddings", type=bool, default=False, help='If set, train embeddings and decoder with diffusion'
     )
     parser.add_argument("--x_T_coef", type=float, default=1., help='Coef for x_T loss for emb training')
     parser.add_argument("--nll_coef", type=float, default=1., help='Coef for nll loss for emb training')

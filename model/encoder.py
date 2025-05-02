@@ -59,7 +59,7 @@ class Encoder(torch.nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(self.encoder_link)
         self.register_buffer("zero_emb", torch.zeros((self.encoder.config.hidden_size)))
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask=None):
         if self.emb:
             return self.embeddings[input_ids]
             # return (self.embeddings[input_ids] - self.emb_mean.cuda()[None, :, :]) / self.emb_std.cuda()[None, :, :]

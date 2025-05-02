@@ -25,7 +25,7 @@ from diffusion_utils.dynamic import DynamicSDE
 from diffusion_utils.solvers import create_solver
 
 from utils.ema_model import ExponentialMovingAverage
-from utils.util import mse_loss, get_stat, reduce_tensor, set_seed, convert_to_simplex
+from utils.util import mse_loss, get_stat, reduce_tensor, set_seed, convert_to_simplex, convert_to_tess_simplex
 from data.dataset import DatasetDDP, get_dataset_iter
 from data.util import BatchEncoding
 
@@ -73,9 +73,6 @@ class DiffusionRunner:
         #     decoder_config=config.decoder,
         #     diffusion_config=config.se_config
         # )
-        # if not config.training.train_embeddings:
-        #     self.restore_decoder()
-        #     self.decoder.eval()
 
         # self.decoder = self.decoder.cuda()
 
@@ -290,11 +287,8 @@ class DiffusionRunner:
         ema.restore(score_model.parameters())
 
     def set_optimizer(self) -> None:
-        parameters = self.score_estimator.parameters()
-        if self.config.training.train_embeddings:
-            parameters = list(parameters) + [self.encoder.embeddings]  # + list(self.decoder.parameters())
         optimizer = torch.optim.AdamW(
-            parameters,
+            self.score_estimator.parameters(),
             lr=self.config.optim.lr,
             weight_decay=self.config.optim.weight_decay,
             betas=(self.config.optim.beta_1, self.config.optim.beta_2),
@@ -560,6 +554,12 @@ class DiffusionRunner:
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=self.encoder.embeddings,
             )
+        elif self.config.tess_diffusion:
+            clean_x = convert_to_tess_simplex(
+                batch['input_ids_trg'],
+                self.config.dynamic.simplex_value,
+                self.encoder.encoder.config.vocab_size
+            )
         noise = torch.randn_like(clean_x)
         x_0_self_cond = torch.zeros_like(target)
         per_t_losses = []
@@ -696,14 +696,14 @@ class DiffusionRunner:
         )
         if self.config.predict_tokens:
             tokens = model_prediction.argmax(-1)
-            predicted_embs = self.encoder(input_ids=tokens, attention_mask=None)
+            predicted_embs = self.encoder(input_ids=tokens)
         elif self.config.clamp:
             tokens = convert_to_simplex(
                 input_embeddings=model_prediction,
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=self.encoder.embeddings,
             ).argmax(-1)
-            predicted_embs = self.encoder(input_ids=tokens, attention_mask=None)
+            predicted_embs = self.encoder(input_ids=tokens)
         else:
             predicted_embs = model_prediction
 
@@ -718,6 +718,10 @@ class DiffusionRunner:
                 input_embeddings=predicted_embs,
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=self.encoder.embeddings,
+            )
+        elif self.config.tess_diffusion:
+            x_0 = convert_to_tess_simplex(
+                tokens, self.config.dynamic.simplex_value, self.encoder.encoder.config.vocab_size
             )
         else:
             x_0 = predicted_embs
@@ -747,8 +751,13 @@ class DiffusionRunner:
                 sigma_0=self.config.dynamic.sigma_min,
                 embeddings=self.encoder.embeddings,
             )
+        elif self.config.tess_diffusion:
+            clean_x = convert_to_tess_simplex(
+                batch['input_ids_trg'],
+                self.config.dynamic.simplex_value,
+                self.encoder.encoder.config.vocab_size
+            )
 
-        # Noising
         batch_size = clean_x.size(0)
 
         t = self.sample_time(batch_size, eps=eps)
@@ -774,7 +783,6 @@ class DiffusionRunner:
                     if self.config.predict_tokens:
                         x_0_self_cond = self.encoder(
                             input_ids=model_output.argmax(-1),
-                            attention_mask=batch["attention_mask_src"]
                         )
 
         if self.config.cluster_diffusion:
@@ -800,44 +808,6 @@ class DiffusionRunner:
         loss = loss + loss_x_0
 
         loss_dict['loss_x_0'] = loss_x_0
-
-        if self.config.training.train_embeddings:
-            # x_T loss to regularize embeddings
-            t = t.fill_(self.dynamic.T)
-            mu_T = self.dynamic.marginal_params(t)['mu']
-            x_T = mu_T * clean_x
-            if self.config.cluster_diffusion:
-                model_input_T = torch.softmax(x_T, dim=-1) @ self.encoder.embeddings
-                tT_loss = mse_loss(model_input_T, self.encoder.embeddings.mean(0, keepdim=True).detach())
-            else:
-                tT_loss = torch.mean(x_T**2)
-            loss_dict['tT_loss'] = tT_loss
-
-            # Decoder loss to learn decoder and prevent embeddings from collapsing
-            # 2 ways of computing decoder loss
-            # 1) Pros: decoder is tuned for model's predictions. Cons: predictions might be not good, because t is big.
-            # if self.config.cluster_diffusion:
-            #     input_embeddings = torch.softmax(clean_x, dim=-1) @ self.encoder.embeddings
-            # else:
-            #     input_embeddings = clean_x
-            # decoder_input = input_embeddings + (x_0 - input_embeddings).detach()
-            # 2) Pros: input is not that noisy. Cons: decoder is not tuned to model as good.
-            t = torch.randn_like(t) * self.config.decoder.T
-            decoder_x_t = self.dynamic.marginal(clean_x, t)["x_t"]
-            if self.config.cluster_diffusion:
-                decoder_input = torch.softmax(decoder_x_t, dim=-1) @ self.encoder.embeddings
-            else:
-                decoder_input = decoder_x_t
-            # logits = self.decoder(decoder_input, cond_x=cond_x, cond_mask=batch.get("attention_mask_src"))
-            logits = self.decode(decoder_input)  # self.decode returns TOKENS!
-            nll_loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), batch['input_ids_trg'].view(-1))
-
-            acc = (logits.argmax(dim=-1) == batch['input_ids_trg']).float().mean()
-            loss_dict['accuracy'] = acc
-            loss_dict['nll_loss'] = nll_loss
-
-            loss = loss + self.config.training.x_T_coef * tT_loss + self.config.training.nll_coef * nll_loss
-
         loss_dict['total_loss'] = loss
 
         with torch.no_grad():
@@ -968,6 +938,7 @@ class DiffusionRunner:
     #     return output
 
     def decode(self, pred_embeddings):
+        # this is just an easy way to find nearest token
         logits = convert_to_simplex(
             input_embeddings=pred_embeddings,
             sigma_0=self.config.dynamic.sigma_min,
