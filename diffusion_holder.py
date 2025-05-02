@@ -717,7 +717,7 @@ class DiffusionRunner:
                 embeddings=self.encoder.embeddings,
             )
         else:
-            x_0 = model_prediction
+            x_0 = predicted_embs
 
         eps_theta = (x_t - params["mu"] * x_0) / params["std"]
         score = -eps_theta / params["std"]
@@ -725,7 +725,7 @@ class DiffusionRunner:
             "score": score,
             "x_0": x_0,
             "eps_theta": eps_theta,
-            "latent_pred": model_prediction,
+            "latent_pred": predicted_embs,
         }
 
     def calc_loss(
