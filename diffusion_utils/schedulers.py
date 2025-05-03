@@ -133,7 +133,7 @@ class TessScheduler(Scheduler, ABC):
         def default_alpha_bar(time_step):
             return torch.cos((time_step + 1e-4) / (1 + 1e-4) * np.pi / 2) ** 2
 
-        alpha_bar = default_alpha_bar(t) / default_alpha_bar(0.0)
+        alpha_bar = default_alpha_bar(t) / default_alpha_bar(torch.tensor(0.0))
         return alpha_bar
 
     def params(self, t):
