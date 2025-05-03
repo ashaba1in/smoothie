@@ -216,7 +216,8 @@ class DiffusionRunner:
 
         self.__save_checkpoint(save_path)
         if self.last_checkpoint is not None and self.last_checkpoint not in self.all_checkpoints:
-            self.__remove_checkpoint(self.last_checkpoint[1])
+            if os.path.isfile(self.last_checkpoint[1]):
+                self.__remove_checkpoint(self.last_checkpoint[1])
 
         self.last_checkpoint = item
 
