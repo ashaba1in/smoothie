@@ -124,9 +124,12 @@ class ClusterCosineSD(Scheduler):
         return torch.sqrt(alpha_t), std_t
 
 
-class TessScheduler(Scheduler, ABC):
+class TessScheduler(Scheduler):
     def __init__(self, simplex_value):
         self.simplex_value = simplex_value
+
+    def beta_t(self, t):
+        pass
 
     def alpha_t(self, t):
         # t in [0, 1]

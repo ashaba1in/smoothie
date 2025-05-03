@@ -95,7 +95,7 @@ def create_config(args):
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
     config.cluster_diffusion = args.cluster_diffusion
-    config.tess_diffusion = args.cluster_diffusion
+    config.tess_diffusion = args.tess_diffusion
     config.random_init_embeddings = args.random_init_embeddings
     config.predict_tokens = args.predict_tokens
     config.clamp = False
