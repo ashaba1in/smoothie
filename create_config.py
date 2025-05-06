@@ -100,9 +100,6 @@ def create_config(args):
     config.predict_tokens = args.predict_tokens
     config.clamp = False
 
-    if config.tess_diffusion:
-        assert config.predict_tokens, 'We can predict only tokens when using TESS'
-
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]
     decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
