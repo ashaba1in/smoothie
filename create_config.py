@@ -98,7 +98,7 @@ def create_config(args):
     config.tess_diffusion = args.tess_diffusion
     config.random_init_embeddings = args.random_init_embeddings
     config.predict_tokens = args.predict_tokens
-    config.clamp = False
+    config.clamp = args.clamp
 
     decoder = config.decoder = create_decoder_config()
     decoder.dataset = data.datasets.datasets_list[0]

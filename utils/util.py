@@ -247,6 +247,9 @@ def parse():
         "--predict_tokens", type=bool, default=False, help='If set, predict logits instead of embeddings'
     )
     parser.add_argument(
+        "--clamp", type=bool, default=False, help='If set, use clamping at generation'
+    )
+    parser.add_argument(
         "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'
     )
     parser.add_argument("--x_T_coef", type=float, default=1., help='Coef for x_T loss for emb training')
