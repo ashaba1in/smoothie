@@ -81,9 +81,9 @@ class DynamicSDE(DynamicBase):
         return drift, diffusion, score_output
 
     def prior_sampling(self, shape) -> Tensor:
-        if self.config.cluster_diffusion:
+        if self.config.dynamic.scheduler == 'cluster_sd':
             return self.config.dynamic.delta * torch.randn(*shape)
-        elif self.config.tess_diffusion:
+        elif self.config.dynamic.scheduler == 'tess':
             return self.config.dynamic.simplex_value * torch.randn(*shape)
         else:
             return torch.randn(*shape)
