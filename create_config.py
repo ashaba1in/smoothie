@@ -219,7 +219,7 @@ def get_sequence_len(dataset_name):
         # "xsum": 120,
         "xsum": 64,
         "wiki_auto": 100,
-        "newsela_auto": 80,
+        "newsela_auto": 64,
         "quasar_t": 50,
     }
     return data[dataset_name]
@@ -233,7 +233,7 @@ def get_context_len(dataset_name):
         # "xsum": 392,
         "xsum": 512,
         "wiki_auto": 100,
-        "newsela_auto": 100,
+        "newsela_auto": 64,
         "quasar_t": 100,
     }
     return data[dataset_name]
