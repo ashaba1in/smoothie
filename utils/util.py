@@ -192,6 +192,9 @@ def parse():
         ],
         required=False,
     )
+    parser.add_argument(
+        "--training_epochs", type=int, default=None, help='Number of training epochs. Used for decoder'
+    )
     parser.add_argument("--local-rank", type=int, default=None)
     parser.add_argument("--swap_cfg_coef", type=float, default=0.)
     parser.add_argument("--scheduler", type=str, default='sd')

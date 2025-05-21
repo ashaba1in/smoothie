@@ -101,6 +101,8 @@ def create_config(args):
     config.clamp = args.clamp
 
     decoder = config.decoder = create_decoder_config()
+    if args.training_epochs is not None:
+        decoder.epochs = args.training_epochs
     decoder.dataset = data.datasets.datasets_list[0]
     decoder.name = args.decoder_name if args.decoder_name is not None else f"decoder-{model.encoder_name_hash}-transformer"
     decoder.name += decoder.suffix
