@@ -25,17 +25,17 @@ class EulerDiffEqSolver:
 
         # DDPM
         # params = self.dynamic.marginal_params(t)
-        # alpha_bar_t = params['mu']
+        # alpha_bar_t = params['mu']**2
         # params = self.dynamic.marginal_params(next_t)
-        # alpha_bar_t_next, std_next = params['mu'], params['std']
+        # alpha_bar_t_next, std_next = params['mu']**2, params['std']
         # alpha_t = alpha_bar_t / alpha_bar_t_next
-
+        #
         # noise_var = std_next ** 2 * (1 - alpha_t) / (1 - alpha_bar_t)
-
+        #
         # mu_x_t_coef = alpha_t ** 0.5 * (1 - alpha_bar_t_next) / (1 - alpha_bar_t)
         # mu_x_0_coef = alpha_bar_t_next ** 0.5 * (1 - alpha_t) / (1 - alpha_bar_t)
         # mu = mu_x_t_coef * x_t + mu_x_0_coef * score_output['x_0']
-
+        #
         # noise = torch.randn_like(x_t)
         # x = mu + noise_var ** 0.5 * noise
 

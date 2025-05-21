@@ -233,7 +233,7 @@ def main():
     encoder = torch.nn.DataParallel(encoder).cuda()
     decoder = Decoder(decoder_config=config.decoder, diffusion_config=config.se_config).train().cuda()
 
-    wandb.init(project=config.project_name, name=config.decoder.name, mode="online")
+    wandb.init(project=config.project_name, name=config.decoder.name)
     train(config, encoder, decoder, tokenizer)
 
 

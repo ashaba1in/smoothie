@@ -180,7 +180,7 @@ def convert_to_simplex(input_embeddings, sigma_0, embeddings):
 
 
 def convert_to_tess_simplex(token_ids, simplex_value, vocab_size):
-    return 2 * simplex_value * F.one_hot(token_ids, vocab_size) - simplex_value
+    return 2 * simplex_value * F.one_hot(token_ids, vocab_size).float() - simplex_value
 
 
 def parse():
