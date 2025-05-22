@@ -126,12 +126,16 @@ def create_config(args):
 
     config.project_name = args.project_name
     config.timesteps = "linear"
-    pref = ""
-    if config.embeddings_path is not None:
-        pref = config.embeddings_path.split('/')[-1]
-    if dynamic.scheduler == 'arctan':
-        pref = f"smoothie_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
-    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
+
+    if args.checkpoints_name is None:
+        pref = ""
+        if config.embeddings_path is not None:
+            pref = config.embeddings_path.split('/')[-1]
+        if dynamic.scheduler == 'arctan':
+            pref = f"smoothie_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
+        training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
+    else:
+        training.checkpoints_prefix = args.checkpoints_name
 
     config.eval = False
 

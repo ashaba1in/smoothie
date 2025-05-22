@@ -260,5 +260,8 @@ def parse():
     parser.add_argument(
         "--run_name", type=str, default="", help='Run name'
     )
+    parser.add_argument(
+        "--checkpoints_name", type=str, default="", help='Checkpoint name used for evaluation'
+    )
 
     return parser.parse_args()
