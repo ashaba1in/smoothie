@@ -1,15 +1,10 @@
 import torch
-import spacy
-from torch.nn.functional import cross_entropy
-from typing import List
 from evaluate import load
 from nltk.util import ngrams
 from collections import defaultdict
 from transformers import AutoTokenizer
 import spacy
 import numpy as np
-
-from utils.util import dict_to_device
 
 
 def compute_metric(metric_name, predictions, references, sources=None, **kwargs):

@@ -1,7 +1,6 @@
 import os
 import wandb
 import random
-import numpy as np
 import torch
 import torch.nn.functional as F
 import ml_collections
@@ -15,7 +14,6 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 from functools import partial
 from timm.scheduler.cosine_lr import CosineLRScheduler
-from collections import defaultdict
 from torch.cuda.amp import GradScaler
 import json
 from copy import deepcopy
@@ -31,8 +29,6 @@ from data.util import BatchEncoding
 
 from model.score_estimator import ScoreEstimatorEMB
 from model.encoder import Encoder
-from model.enc_normalizer import EncNormalizer
-from model.decoder import Decoder
 
 from estimation_utils.util import gather_texts
 from estimation_utils.metrics import compute_metric
@@ -48,33 +44,12 @@ class DiffusionRunner:
         self.config = config
 
         # Diffusion Encoder
-        gen_cfg = config.model.encoder_link
-        self.tokenizer = AutoTokenizer.from_pretrained(gen_cfg)
-        if not config.emb:
-            self.gen_enc_normalizer = EncNormalizer(
-                enc_mean_path=self.config.data.enc_gen_mean,
-                enc_std_path=self.config.data.enc_gen_std,
-            )
-        else:
-            self.gen_enc_normalizer = None
-        
+        encoder_name = config.model.encoder_link
+        self.tokenizer = AutoTokenizer.from_pretrained(encoder_name)
         self.encoder = Encoder(
-            gen_cfg,
-            enc_normalizer=self.gen_enc_normalizer,
-            is_change_sp_tokens=True,
-            emb=config.emb,
-            embeddings_path=config.embeddings_path,
+            encoder_name,
             emb_statistics_agg_type=config.emb_statistics_agg_type,
-            random_init=config.random_init_embeddings
         ).eval().cuda()
-
-        # Decoder
-        # self.decoder = Decoder(
-        #     decoder_config=config.decoder,
-        #     diffusion_config=config.se_config
-        # )
-
-        # self.decoder = self.decoder.cuda()
 
         # Score estimator
         self.se_config = deepcopy(config.se_config)
@@ -103,7 +78,7 @@ class DiffusionRunner:
 
         # Dynamic
         self.dynamic = DynamicSDE(config=config)
-        self.diff_eq_solver = create_solver(config)(
+        self.diff_eq_solver = create_solver()(
             dynamic=self.dynamic,
             score_fn=partial(self.calc_score, model=self.ddp_score_estimator),
             ode_sampling=config.training.ode_sampling
@@ -234,7 +209,6 @@ class DiffusionRunner:
                 "scaler": self.grad_scaler.state_dict(),
                 "step": self.step,
                 "encoder": self.encoder.state_dict(),
-                # "decoder": self.decoder.state_dict(),
             },
             save_path
         )
@@ -271,10 +245,6 @@ class DiffusionRunner:
         if dist.get_rank() == 0:
             print(f"Checkpoint is loaded {checkpoint_name}")
         return True
-
-    # def restore_decoder(self):
-    #     decoder_path = self.config.decoder.decoder_path
-    #     self.decoder.load_state_dict(torch.load(decoder_path)["decoder"])
 
     def switch_to_ema(self) -> None:
         ema = self.ema
@@ -387,7 +357,6 @@ class DiffusionRunner:
 
     def optimizer_step(self, loss: torch.Tensor):
         self.optimizer.zero_grad()
-        # loss.backward()
         self.grad_scaler.scale(loss).backward()
         self.grad_scaler.unscale_(self.optimizer)
         
@@ -402,16 +371,8 @@ class DiffusionRunner:
             )
 
         self.log_metric('lr', 'train', self.optimizer.param_groups[0]['lr'])
-        # self.optimizer.step()
         self.grad_scaler.step(self.optimizer)
         self.grad_scaler.update()
-
-        # My custom strategy
-        scale = self.grad_scaler._scale.item()
-        max_scale = 2 ** 30
-        min_scale = 1
-        scale = np.clip(scale, min_scale, max_scale)
-        self.grad_scaler.update(new_scale=scale)
 
         self.ema.update(self.score_estimator.parameters())
         self.scheduler.step_update(self.step)
@@ -469,17 +430,11 @@ class DiffusionRunner:
                 batch = batch.to(f"cuda:{dist.get_rank()}")
 
                 if self.config.is_conditional:
-                    src_x = self.encoder(**{
-                        "input_ids": batch["input_ids_src"],
-                        "attention_mask": batch["attention_mask_src"]
-                    })
+                    src_x = self.encoder(input_ids=batch["input_ids_src"])
                 else:
                     src_x = None
 
-                trg_x = self.encoder(**{
-                    "input_ids": batch["input_ids_trg"], 
-                    "attention_mask": batch["attention_mask_trg"]
-                })
+                trg_x = self.encoder(input_ids=batch["input_ids_trg"])
 
         loss_dict, stat_dict = self.calc_loss(clean_x=trg_x, cond_x=src_x, batch=batch)
 
@@ -513,17 +468,11 @@ class DiffusionRunner:
         for batch in self.valid_loader:
             batch = batch.to(f"cuda:{dist.get_rank()}")
             if self.config.is_conditional:
-                src_x = self.encoder(**{
-                    "input_ids": batch["input_ids_src"],
-                    "attention_mask": batch["attention_mask_src"]
-                })
+                src_x = self.encoder(input_ids=batch["input_ids_src"])
             else:
                 src_x = None
 
-            trg_x = self.encoder(**{
-                "input_ids": batch["input_ids_trg"], 
-                "attention_mask": batch["attention_mask_trg"]
-            })
+            trg_x = self.encoder(input_ids=batch["input_ids_trg"])
 
             loss_dict, _ = self.calc_loss(clean_x=trg_x, cond_x=src_x, batch=batch)
             for k, v in loss_dict.items():
@@ -543,11 +492,7 @@ class DiffusionRunner:
             self.log_metric(k, 'valid_loader', v)
 
         # --------- Eval per timestep metrics ------------
-
-        clean_x = self.encoder(**{
-            "input_ids": batch["input_ids_trg"],
-            "attention_mask": batch["attention_mask_trg"]
-        })
+        clean_x = self.encoder(input_ids=batch["input_ids_trg"])
         target = clean_x.clone()
         if self.config.cluster_diffusion:
             clean_x = convert_to_simplex(
@@ -593,7 +538,6 @@ class DiffusionRunner:
                 loss = mse_loss(target, model_output)
 
             per_t_losses.append(loss.item())
-            # pred_tokens = self.decoder(x_0, cond_x=src_x, cond_mask=batch.get("attention_mask_src")).argmax(-1)
             if self.config.predict_tokens:
                 pred_tokens = model_output.argmax(-1)
             else:
@@ -653,10 +597,7 @@ class DiffusionRunner:
             return_attention_mask=True,
             return_token_type_ids=False,
         ).to(f"cuda:{dist.get_rank()}")
-        src_x = self.encoder(
-            input_ids=tok_src["input_ids"],
-            attention_mask=tok_src["attention_mask"]
-        )
+        src_x = self.encoder(input_ids=tok_src["input_ids"])
 
         x_0 = model(
             x_t=x_t, 
@@ -831,10 +772,6 @@ class DiffusionRunner:
             target_dict_SPT = get_stat(target, mask)
             for key in target_dict_SPT:
                 stat_dict[f"clean_x_woSPT_{key}"] = target_dict_SPT[key]
-    
-            # x_0_dict_SPT = get_stat(model_output, mask)
-            # for key in x_0_dict_SPT:
-            #     stat_dict[f"x_0_woSPT_{key}"] = x_0_dict_SPT[key]
 
         return loss_dict, stat_dict
 
@@ -862,10 +799,7 @@ class DiffusionRunner:
             else:
                 batch = batch.to(f"cuda:0")
             if self.config.is_conditional:
-                src_x = self.encoder(**{
-                    "input_ids": batch["input_ids_src"],
-                    "attention_mask": batch["attention_mask_src"]
-                })
+                src_x = self.encoder(input_ids=batch["input_ids_src"])
             else:
                 src_x = None
 
@@ -876,14 +810,7 @@ class DiffusionRunner:
                 cond_mask=batch.get("attention_mask_src")
             )[0]
 
-            # if dataset_name not in self.config.data.datasets.downstream_tasks:
             result_dict["TRG"] += self.tokenizer.batch_decode(batch["input_ids_trg"], skip_special_tokens=True)
-            # else:
-            #     if "text_references" in batch:
-            #         result_dict["TRG"] += batch["text_references"]
-            #     else:
-            #         result_dict["TRG"] += batch["text_trg"]
-                
             result_dict["GEN"] += gen_text
             if self.config.is_conditional:
                 result_dict["SRC"] += batch["text_src"]
@@ -906,9 +833,6 @@ class DiffusionRunner:
             eps_t=eps_t,
             x=x
         )
-
-        # output = self.pred_logits(pred_embeddings, cond_x=cond_x, cond_mask=cond_mask)
-        # tokens = output.argmax(dim=-1)
         tokens = self.decode(pred_embeddings)
 
         end_tokens = []
@@ -927,16 +851,6 @@ class DiffusionRunner:
 
         text = self.tokenizer.batch_decode(tokens_list, skip_special_tokens=True)
         return text, pred_embeddings
-
-    # @torch.no_grad()
-    # def pred_logits(self, pred_embeddings, cond_x=None, cond_mask=None):
-    #     if not self.config.emb:
-    #         pred_embeddings = self.gen_enc_normalizer.denormalize(pred_embeddings)
-    #         if self.config.decoder.is_conditional and cond_x is not None:
-    #             cond_x = self.gen_enc_normalizer.denormalize(cond_x)
-    #
-    #     output = self.decoder(pred_embeddings, cond_x=cond_x, cond_mask=cond_mask)
-    #     return output
 
     def decode(self, pred_embeddings):
         # this is just an easy way to find nearest token

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABCMeta, abstractmethod
 
 
 def create_scheduler(config):
@@ -10,9 +10,10 @@ def create_scheduler(config):
         return CosineSD(config.dynamic.coef_d)
     elif config.dynamic.scheduler == 'sqrt':
         return Sqrt()
-    elif config.dynamic.scheduler == 'cluster_sd':
-        return ClusterCosineSD(
-            config.dynamic.coef_d, config.dynamic.delta, config.dynamic.sigma_min, config.dynamic.sigma_max
+    elif config.dynamic.scheduler == 'arctan':
+        return Arctan(
+            config.dynamic.coef_d, config.dynamic.delta,
+            config.dynamic.sigma_min, config.dynamic.sigma_max
         )
     elif config.dynamic.scheduler == 'tess':
         return TessScheduler(config.dynamic.simplex_value)
@@ -20,14 +21,7 @@ def create_scheduler(config):
 
 class Scheduler(metaclass=ABCMeta):
     @abstractmethod
-    def beta_t(self, t):
-        pass
-
-    @abstractmethod
     def params(self, t):
-        pass
-
-    def reverse(self, alpha):
         pass
 
 
@@ -35,9 +29,6 @@ class Cosine(Scheduler):
     def __init__(self, beta_0, beta_1):
         self.beta_0 = beta_0
         self.beta_1 = beta_1
-
-    def beta_t(self, t):
-        return self.beta_0 + (self.beta_1 - self.beta_0) * t
 
     def params(self, t):
         t = t[:, None, None]
@@ -53,12 +44,6 @@ class CosineSD(Scheduler):
         self.d = d
         self.t_thr = 0.95
 
-    def beta_t(self, t):
-        t = torch.clip(t, 0, self.t_thr)
-        tan = torch.tan(np.pi * t / 2)
-        beta_t = np.pi * self.d ** 2 * tan * (1 + tan ** 2) / (1 + self.d ** 2 * tan ** 2)
-        return beta_t
-
     def params(self, t):
         t = t[:, None, None]
         tan = torch.tan(np.pi * t / 2)
@@ -71,11 +56,6 @@ class Sqrt(Scheduler):
     def __init__(self, ):
         self.s = 0.0001
 
-    def beta_t(self, t):
-        beta_t = 1 / 2 / ((torch.sqrt(t + self.s)) * (1 - torch.sqrt(t + self.s)))
-        beta_t = torch.clip(beta_t, 0, 1000)
-        return beta_t
-
     def params(self, t):
         t = t[:, None, None]
 
@@ -86,7 +66,7 @@ class Sqrt(Scheduler):
         return torch.clip(mu, 0, 1), torch.clip(std, 0, 1)
 
 
-class ClusterCosineSD(Scheduler):
+class Arctan(Scheduler):
     def __init__(self, d=5, delta=0.25, sigma_min=0.1, sigma_max=20.0, sqrt=True):
         self.d = d
         self.delta = delta
@@ -102,21 +82,6 @@ class ClusterCosineSD(Scheduler):
         else:
             return self.multiplier * 2 / np.pi * torch.arctan(1 / self.d * t / (1 - t)) + self.addendum
 
-    def beta_t(self, t):
-        t = torch.clip(t, 1 - self.t_thr, self.t_thr)
-        if self.sqrt:
-            beta_t = 2 * self.multiplier * self.d / (
-                    (self.d ** 2 * (1 - t) + t) *
-                    torch.sqrt(t * (1 - t)) *
-                    (torch.arctan(1 / self.d * torch.sqrt(t / (1 - t))) * self.multiplier + np.pi / 2 * self.addendum)
-            )
-        else:
-            beta_t = 4 * self.multiplier * self.d / (
-                    (self.d ** 2 * (1 - t)**2 + t**2) *
-                    (torch.arctan(1 / self.d * t / (1 - t)) * self.multiplier + np.pi / 2 * self.addendum)
-            )
-        return beta_t
-
     def params(self, t):
         t = t[:, None, None]
         alpha_t = 1 / self.sigma_bar(t)**4
@@ -127,9 +92,6 @@ class ClusterCosineSD(Scheduler):
 class TessScheduler(Scheduler):
     def __init__(self, simplex_value):
         self.simplex_value = simplex_value
-
-    def beta_t(self, t):
-        pass
 
     def alpha_t(self, t):
         # t in [0, 1]

@@ -188,7 +188,7 @@ def parse():
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "wikipedia", "qqp", "xsum", "wiki_auto", "newsela_auto", "quasar_t",
+            "rocstories", "qqp", "xsum", "newsela_auto", "quasar_t",
         ],
         required=False,
     )
@@ -197,7 +197,7 @@ def parse():
     )
     parser.add_argument("--local-rank", type=int, default=None)
     parser.add_argument("--swap_cfg_coef", type=float, default=0.)
-    parser.add_argument("--scheduler", type=str, default='sd')
+    parser.add_argument("--scheduler", type=str, default='arctan')
     parser.add_argument("--coef_d", type=float, default=9)
     parser.add_argument("--delta", type=float, default=1.0)
     parser.add_argument("--sigma_min", type=float, default=1.5)
@@ -206,7 +206,6 @@ def parse():
     parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
     parser.add_argument("--lr", type=float, default=2e-4, help='Learning rate')
     parser.add_argument("--wd", type=float, default=0.01, help='Weight decay')
-    parser.add_argument("--emb", type=bool, default=False, help='If set, train model on embeddings')
     parser.add_argument(
         "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],
         help='Sets dimensions for aggregation of embeddings values'
@@ -252,11 +251,6 @@ def parse():
     parser.add_argument(
         "--clamp", type=bool, default=False, help='If set, use clamping at generation'
     )
-    parser.add_argument(
-        "--random_init_embeddings", type=bool, default=False, help='If set, init embeddings with random weights'
-    )
-    parser.add_argument("--x_T_coef", type=float, default=1., help='Coef for x_T loss for emb training')
-    parser.add_argument("--nll_coef", type=float, default=1., help='Coef for nll loss for emb training')
     parser.add_argument('--condition_type', type=str, default='cross-attention', choices=[
             "cross-attention", "concatenation",
         ], help='The type of conditioning for diffusion model')
@@ -266,4 +260,3 @@ def parse():
     )
 
     return parser.parse_args()
-

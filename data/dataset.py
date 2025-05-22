@@ -1,22 +1,9 @@
-import os
-import gc
-import torch
-import numpy as np
-from random import random
-import torch.distributed as dist
-from typing import List
-import datasets
-from datasets import Dataset, load_from_disk, concatenate_datasets, DatasetDict
-
-from .dataset_wiki import WikipediaDatasetDDP
+from datasets import concatenate_datasets
 from .dataset_tasks import DownstreamTaskDatasetDDP
 
 
 def get_dataset_iter(config, dataset_name, split):
-    if dataset_name.startswith("wikipedia"):
-        dt = WikipediaDatasetDDP(config, dataset_name, split)
-    else:
-        dt = DownstreamTaskDatasetDDP(config, dataset_name, split)
+    dt = DownstreamTaskDatasetDDP(config, dataset_name, split)
     return dt.get_data()
 
 

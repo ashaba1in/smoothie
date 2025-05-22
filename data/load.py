@@ -1,86 +1,8 @@
+import json
+
 from datasets import load_dataset, Dataset, DatasetDict, concatenate_datasets
-from collections import defaultdict
-from create_config import create_config
-from itertools import chain
 import argparse
-from huggingface_hub import HfApi
-import nltk
 import os
-
-
-def download_wikipedia(dataset_path):
-    # for private dataset 
-    # huggingface-cli login
-
-    dt = load_dataset("bigscience-data/roots_en_wikipedia")
-    dt = dt["train"]
-    dt = dt.remove_columns("meta")
-
-    # Split Articles by \n\n
-    def split(batch):
-        result = []
-        for text in batch["text"]:
-            texts = text.split("\n\n")
-            result.append(texts)
-        result = list(chain(*result))
-        return {"text": result}
-    
-    dt = dt.map(
-        split,
-        batched=True,
-        num_proc=30,
-        desc="Dataset split",
-        batch_size=1000,
-    )
-
-    # Filter small texts
-    min_symbols = 600
-    dt = dt.filter(lambda b: len(b["text"]) >= min_symbols, num_proc=30)
-
-    # Split into sentences
-    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-
-    def split_into_sents(batch):
-        result = []
-        for text in batch["text"]:
-            texts = tokenizer.tokenize(text)
-            result.append(texts)
-        result = list(chain(*result))
-        return {"text": result}
-    
-    sent_dt = dt.map(
-        split_into_sents,
-        batched=True,
-        num_proc=30,
-        desc="Dataset split",
-        batch_size=1000,
-    )
-
-    def join_sents(batch):
-        result = []
-        cur_text = ''
-        for text in batch["text"]:
-            if len(cur_text.split()) + len(text.split()) < 128 / 2:
-                cur_text += ' ' + text
-            else:
-                result.append(cur_text)
-                cur_text = text
-        
-        return {"text": result}
-
-    joined_dt = sent_dt.map(
-        join_sents,
-        batched=True,
-        num_proc=30,
-        desc="Dataset join",
-        batch_size=100000,
-    )
-
-    dt = joined_dt.train_test_split(test_size=0.002, seed=0)
-    dt.save_to_disk(
-        dataset_path,
-        num_shards={'train': 20, 'test': 1}
-    )
 
 
 def download_qqp(dataset_path):
@@ -108,45 +30,6 @@ def download_xsum(dataset_path):
     dt.save_to_disk(dataset_path)
 
 
-def download_wiki_auto(dataset_path):
-    dt = load_dataset("GEM/wiki_auto_asset_turk")
-    dt = dt.remove_columns(["gem_id", "gem_parent_id"])
-    
-    dt = DatasetDict(
-        {
-            "train": dt["train"],
-            "validation": dt["validation"],
-            "test": dt["test_asset"],
-        }
-    )
-    dt.save_to_disk(dataset_path)
-
-
-def download_squad(dataset_path):
-    def make_batch(batch):
-        new_batch = {
-            "source": [],
-            "target": [],
-        }
-
-        for context, answer, target in zip(batch["context"], batch["answers"], batch["target"]):
-            if answer["text"]:
-                new_batch["source"].append(f"Context: {context}. Answer: {answer['text'][0]}.")
-                new_batch["target"].append(target)
-        return new_batch
-    
-    dt = load_dataset("GEM/squad_v2")
-    dt = dt.map(
-        make_batch,
-        batched=True,
-        num_proc=30,
-        desc="Dataset split",
-        batch_size=1000,
-        remove_columns=dt["train"].column_names
-    )
-    dt.save_to_disk(dataset_path)
-    
-
 def download_rocstory(dataset_path):
     def preprocess(batch):
         targets = []
@@ -169,12 +52,35 @@ def download_rocstory(dataset_path):
     dt.save_to_disk(dataset_path)
 
 
+def process_diffuseq_dataset(dataset_path):
+    splits = ['train', 'valid', 'test']
+    dataset = {split: {'src': [], 'trg': []} for split in splits}
+
+    for split in splits:
+        with open(f'{dataset_path}/{split}.jsonl', 'r') as file:
+            # Iterate over each line in the file
+            for line in file:
+                # Strip any leading/trailing whitespace (including newlines)
+                line = line.strip()
+                # Parse the JSON string into a dictionary
+                data_dict = json.loads(line)
+                dataset[split]['src'].append(data_dict['src'])
+                dataset[split]['trg'].append(data_dict['trg'])
+
+    for k, v in dataset.items():
+        dataset[k] = Dataset.from_dict(v)
+    dataset = DatasetDict(dataset)
+    dataset['validation'] = dataset['valid']
+    del dataset['valid']
+    dataset.save_to_disk(dataset_path)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dataset arguments")
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "wikipedia", "qqp", "xsum", "wiki_auto", "newsela_auto", "quasar_t",
+            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto"
         ],
         required=True,
     )
@@ -187,11 +93,9 @@ if __name__ == "__main__":
 
     if args.dataset_name == "rocstories":
         download_rocstory(args.dataset_path + args.dataset_name)
-    if args.dataset_name == "wikipedia":
-        download_wikipedia(args.dataset_path + args.dataset_name)
-    if args.dataset_name == "qqp":
+    elif args.dataset_name == "qqp":
         download_qqp(args.dataset_path + args.dataset_name)
-    if args.dataset_name == "xsum":
+    elif args.dataset_name == "xsum":
         download_xsum(args.dataset_path + args.dataset_name)
-    if args.dataset_name == "wiki_auto":
-        download_wiki_auto(args.dataset_path + args.dataset_name)
+    elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
+        process_diffuseq_dataset(args.dataset_path + args.dataset_name)

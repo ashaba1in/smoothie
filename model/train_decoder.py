@@ -1,19 +1,15 @@
 import os
 import torch
 import wandb
-import numpy as np
-import argparse
 from tqdm import tqdm
 from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
-from utils.util import dict_to_cuda
 from model.decoder import Decoder
 from data.dataset import get_dataset_iter
 from model.encoder import Encoder
 from create_config import create_config
-from model.enc_normalizer import EncNormalizer
 from diffusion_utils.dynamic import DynamicSDE
 from utils.util import parse
 
@@ -88,9 +84,6 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
             t = torch.rand(latent.shape[0], 1, 1, device=latent.device)
             noise = torch.randn_like(latent) * config.decoder.noise_sigma * t
             latent = latent + noise
-    with torch.no_grad():
-        if not config.emb:
-            latent = encoder.module.enc_normalizer.denormalize(latent)
 
     if config.decoder.is_conditional:
         src = tokenizer(
@@ -109,8 +102,6 @@ def loss_step(batch, tokenizer, encoder, decoder, config, eval=False):
                 input_ids=src["input_ids"],
                 attention_mask=src["attention_mask"]
             )
-            if not config.emb:
-                src_latent = encoder.module.enc_normalizer.denormalize(src_latent)
         src_mask = src["attention_mask"]
     else:
         src_latent = None
@@ -213,19 +204,8 @@ def main():
     args = parse()
 
     config = create_config(args)
-    if not config.emb:
-        enc_normalizer = EncNormalizer(
-            enc_mean_path=config.data.enc_gen_mean,
-            enc_std_path=config.data.enc_gen_std,
-        )
-    else:
-        enc_normalizer = None
     encoder = Encoder(
         config.model.encoder_link,
-        enc_normalizer=enc_normalizer,
-        is_change_sp_tokens=True,
-        emb=config.emb,
-        embeddings_path=config.embeddings_path,
         emb_statistics_agg_type=config.emb_statistics_agg_type,
     ).eval()
     tokenizer = AutoTokenizer.from_pretrained(encoder.encoder_link)

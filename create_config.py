@@ -11,7 +11,7 @@ def create_config(args):
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
-    training.training_iters = 1_000_000 * training.accum_batch_steps
+    training.training_iters = 500_000 * training.accum_batch_steps
     training.training_iters = training.training_iters
     training.checkpoint_freq = 25_000 * training.accum_batch_steps
     training.eval_freq = 25_000 * training.accum_batch_steps
@@ -19,8 +19,6 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
-    training.x_T_coef = args.x_T_coef
-    training.nll_coef = args.nll_coef
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.
@@ -40,9 +38,8 @@ def create_config(args):
     validation.cfg_coef = 0.
 
     dynamic = config.dynamic = ml_collections.ConfigDict()
-    dynamic.solver = 'euler'
     dynamic.scheduler = args.scheduler
-    dynamic.N = 100
+    dynamic.N = 200
     dynamic.beta_min = 0.1
     dynamic.beta_max = 20
     dynamic.ode_sampling = False
@@ -91,12 +88,10 @@ def create_config(args):
     config.ddp = True
     config.use_self_cond = args.use_self_cond
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
-    config.emb = args.emb
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
     config.cluster_diffusion = args.cluster_diffusion
     config.tess_diffusion = args.tess_diffusion
-    config.random_init_embeddings = args.random_init_embeddings
     config.predict_tokens = args.predict_tokens
     config.clamp = args.clamp
 
@@ -131,13 +126,12 @@ def create_config(args):
 
     config.project_name = args.project_name
     config.timesteps = "linear"
-    pref = "emb" if config.emb else "tencdm"
+    pref = ""
     if config.embeddings_path is not None:
         pref = config.embeddings_path.split('/')[-1]
-    if dynamic.scheduler == 'cluster_sd':
+    if dynamic.scheduler == 'arctan':
         pref = f"cluster_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
-    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}-{os.environ.get('SLURM_JOB_ID')}"
-    # training.checkpoints_prefix = f"cluster_delta1.0_min1.5_max200.0_d6.0-xsum-cond_encoder-2548668"
+    training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
 
     config.eval = False
 
@@ -218,7 +212,6 @@ def get_sequence_len(dataset_name):
         "wikipedia": 128,
         "rocstories": 80,
         "qqp": 50,
-        # "xsum": 120,
         "xsum": 64,
         "wiki_auto": 100,
         "newsela_auto": 64,
@@ -232,7 +225,6 @@ def get_context_len(dataset_name):
         "wikipedia": 128,
         "rocstories": 80,
         "qqp": 50,
-        # "xsum": 392,
         "xsum": 512,
         "wiki_auto": 100,
         "newsela_auto": 64,
