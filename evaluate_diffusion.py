@@ -1,9 +1,10 @@
 import os
 import torch
-from create_config import create_config
-from diffusion_holder import DiffusionRunner
-from utils.util import parse, set_seed
 import torch.distributed as dist
+
+from diffusion_holder import DiffusionRunner
+from utils.util import set_seed, parse
+from create_config import create_config
 
 
 if __name__ == '__main__':
