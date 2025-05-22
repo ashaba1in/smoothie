@@ -33,7 +33,7 @@ def create_config(args):
 
     validation = config.validation = ml_collections.ConfigDict()
     validation.batch_size = 100
-    validation.num_gen_texts = 1000
+    validation.num_gen_texts = args.num_gen_texts
     validation.texts_path = f"{config.work_dir}/generated_texts"
     validation.cfg_coef = 0.
 
@@ -90,7 +90,7 @@ def create_config(args):
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.embeddings_path = args.embeddings_path
-    config.cluster_diffusion = args.cluster_diffusion
+    config.smooth_diffusion = args.smooth_diffusion
     config.tess_diffusion = args.tess_diffusion
     config.predict_tokens = args.predict_tokens
     config.clamp = args.clamp
@@ -130,7 +130,7 @@ def create_config(args):
     if config.embeddings_path is not None:
         pref = config.embeddings_path.split('/')[-1]
     if dynamic.scheduler == 'arctan':
-        pref = f"cluster_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
+        pref = f"smoothie_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
     training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
 
     config.eval = False

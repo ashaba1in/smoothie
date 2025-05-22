@@ -494,7 +494,7 @@ class DiffusionRunner:
         # --------- Eval per timestep metrics ------------
         clean_x = self.encoder(input_ids=batch["input_ids_trg"])
         target = clean_x.clone()
-        if self.config.cluster_diffusion:
+        if self.config.smooth_diffusion:
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x,
                 sigma_0=self.config.dynamic.sigma_min,
@@ -517,7 +517,7 @@ class DiffusionRunner:
             marg_forward = self.dynamic.marginal(clean_x, timesteps, noise=noise)
             x_t = marg_forward['x_t']
 
-            if self.config.cluster_diffusion or self.config.tess_diffusion:
+            if self.config.smooth_diffusion or self.config.tess_diffusion:
                 model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
@@ -544,7 +544,7 @@ class DiffusionRunner:
                 pred_tokens = self.decode(model_output)
             mask = batch['attention_mask_trg'].bool()
             accuracies.append((pred_tokens[mask] == batch["input_ids_trg"][mask]).float().mean().item())
-            if self.config.cluster_diffusion or self.config.tess_diffusion:
+            if self.config.smooth_diffusion or self.config.tess_diffusion:
                 probs_t = torch.softmax(x_t, dim=-1)
                 id_probs_t = probs_t.gather(2, batch["input_ids_trg"].unsqueeze(-1))
                 mean_id_probs_t.append(id_probs_t.mean().item())
@@ -565,7 +565,7 @@ class DiffusionRunner:
         plt.title('Accuracies')
         plt.grid()
 
-        if self.config.cluster_diffusion or self.config.tess_diffusion:
+        if self.config.smooth_diffusion or self.config.tess_diffusion:
             plt.subplot(1, 3, 3)
             plt.plot(ts, mean_id_probs_t)
             plt.xlabel('timestep')
@@ -624,7 +624,7 @@ class DiffusionRunner:
         score = (-x_t + sqrt(alpha_t) * x_0) / std**2
         """
         params = self.dynamic.marginal_params(t)
-        if self.config.cluster_diffusion or self.config.tess_diffusion:
+        if self.config.smooth_diffusion or self.config.tess_diffusion:
             # x_t is [bs, seq_len, V]
             model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
@@ -655,7 +655,7 @@ class DiffusionRunner:
             )
             predicted_embs = predicted_embs + self.config.validation.cfg_coef * (predicted_embs - null_pred)
 
-        if self.config.cluster_diffusion:
+        if self.config.smooth_diffusion:
             x_0 = convert_to_simplex(
                 input_embeddings=predicted_embs,
                 sigma_0=self.config.dynamic.sigma_min,
@@ -687,7 +687,7 @@ class DiffusionRunner:
         mask = None
 
         target = clean_x.clone()
-        if self.config.cluster_diffusion:
+        if self.config.smooth_diffusion:
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x.detach(),
                 sigma_0=self.config.dynamic.sigma_min,
@@ -709,7 +709,7 @@ class DiffusionRunner:
         loss_dict = dict()
         x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
         if self.config.use_self_cond and random.random() > 0.5:
-            if self.config.cluster_diffusion or self.config.tess_diffusion:
+            if self.config.smooth_diffusion or self.config.tess_diffusion:
                 model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
@@ -727,7 +727,7 @@ class DiffusionRunner:
                             input_ids=model_output.argmax(-1),
                         )
 
-        if self.config.cluster_diffusion or self.config.tess_diffusion:
+        if self.config.smooth_diffusion or self.config.tess_diffusion:
             model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
             model_input = x_t
@@ -754,7 +754,7 @@ class DiffusionRunner:
 
         with torch.no_grad():
             stat_dict = {}
-            if self.config.cluster_diffusion or self.config.tess_diffusion:
+            if self.config.smooth_diffusion or self.config.tess_diffusion:
                 D_0_dict = get_stat(clean_x, mask)
                 for key in D_0_dict:
                     stat_dict[f"D_0_{key}"] = D_0_dict[key]
@@ -815,7 +815,8 @@ class DiffusionRunner:
             if self.config.is_conditional:
                 result_dict["SRC"] += batch["text_src"]
 
-            if len(result_dict["TRG"]) >= (self.config.validation.num_gen_texts // dist.get_world_size()):
+            if self.config.validation.num_gen_texts != -1 and \
+                    len(result_dict["TRG"]) >= (self.config.validation.num_gen_texts // dist.get_world_size()):
                 break
 
         return result_dict
@@ -874,7 +875,7 @@ class DiffusionRunner:
     ) -> torch.Tensor:
         self.score_estimator.eval()
 
-        if self.config.cluster_diffusion or self.config.tess_diffusion:
+        if self.config.smooth_diffusion or self.config.tess_diffusion:
             shape = (
                 batch_size,
                 self.config.data.max_sequence_len,

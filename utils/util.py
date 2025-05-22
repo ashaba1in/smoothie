@@ -203,11 +203,12 @@ def parse():
     parser.add_argument("--sigma_min", type=float, default=1.5)
     parser.add_argument("--sigma_max", type=float, default=200.0)
     parser.add_argument("--simplex_value", type=float, default=5.0, help='k in TESS paper')
-    parser.add_argument("--batch_size", type=int, default=512, help='Train batch size')
+    parser.add_argument("--batch_size", type=int, default=256, help='Train batch size')
     parser.add_argument("--lr", type=float, default=2e-4, help='Learning rate')
     parser.add_argument("--wd", type=float, default=0.01, help='Weight decay')
+    parser.add_argument("--num_gen_texts", type=int, default=-1, help='Number of generated texts')
     parser.add_argument(
-        "--emb_statistics_agg_type", type=str, default='features', choices=["features", "total"],
+        "--emb_statistics_agg_type", type=str, default='total', choices=["features", "total"],
         help='Sets dimensions for aggregation of embeddings values'
     )
     parser.add_argument(
@@ -227,14 +228,15 @@ def parse():
     parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     parser.add_argument(
-        '--condition_encoder', type=str, default=None, choices=['transformer'], help='Encoder to process condition'
+        '--condition_encoder', type=str, default="transformer",
+        choices=['transformer'], help='Encoder to process condition'
     )
     parser.add_argument(
-        '--decoder_condition_encoder', type=str, default=None,
+        '--decoder_condition_encoder', type=str, default="transformer",
         choices=['transformer'], help='Encoder to process condition for decoder'
     )
     parser.add_argument(
-        "--cluster_diffusion", type=bool, default=False, help='If set, use clusterization-like noising'
+        "--smooth_diffusion", type=bool, default=False, help='If set, use smoothing-like noising'
     )
     parser.add_argument(
         "--tess_diffusion", type=bool, default=False, help='If set, use tess diffusion process'
