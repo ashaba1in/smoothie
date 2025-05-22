@@ -39,7 +39,7 @@ def create_config(args):
 
     dynamic = config.dynamic = ml_collections.ConfigDict()
     dynamic.scheduler = args.scheduler
-    dynamic.N = 200
+    dynamic.N = args.num_gen_steps
     dynamic.beta_min = 0.1
     dynamic.beta_max = 20
     dynamic.ode_sampling = False

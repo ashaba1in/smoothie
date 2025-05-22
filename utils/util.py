@@ -207,6 +207,7 @@ def parse():
     parser.add_argument("--lr", type=float, default=2e-4, help='Learning rate')
     parser.add_argument("--wd", type=float, default=0.01, help='Weight decay')
     parser.add_argument("--num_gen_texts", type=int, default=-1, help='Number of generated texts')
+    parser.add_argument("--num_gen_steps", type=int, default=200, help='Number of steps used for generation')
     parser.add_argument(
         "--emb_statistics_agg_type", type=str, default='total', choices=["features", "total"],
         help='Sets dimensions for aggregation of embeddings values'
