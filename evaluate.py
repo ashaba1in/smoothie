@@ -1,19 +1,10 @@
 import os
 import torch
-from argparse import Namespace
-from data.dataset import get_dataset_iter
-from torch.utils.data import DataLoader
 from create_config import create_config
-from transformers import AutoTokenizer
-from model.score_estimator import ScoreEstimatorEMB
-from model.encoder import Encoder
-from model.decoder import Decoder
-from utils.ema_model import ExponentialMovingAverage
 from diffusion_holder import DiffusionRunner
-import matplotlib.pyplot as plt
-from utils.util import convert_to_simplex, parse, set_seed
-from tqdm.auto import tqdm
+from utils.util import parse, set_seed
 import torch.distributed as dist
+
 
 if __name__ == '__main__':
     args = parse()
