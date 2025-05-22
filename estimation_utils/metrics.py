@@ -1,5 +1,5 @@
 import torch
-from evaluate import load
+from evaluate_diffusion import load
 from nltk.util import ngrams
 from collections import defaultdict
 from transformers import AutoTokenizer

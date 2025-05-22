@@ -131,8 +131,8 @@ def create_config(args):
         pref = ""
         if config.embeddings_path is not None:
             pref = config.embeddings_path.split('/')[-1]
-        if dynamic.scheduler == 'arctan':
-            pref = f"smoothie_delta{dynamic.delta}_min{dynamic.sigma_min}_max{dynamic.sigma_max}_d{dynamic.coef_d}"
+        if args.smooth_diffusion:
+            pref = f"smoothie"
         training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
     else:
         training.checkpoints_prefix = args.checkpoints_name
