@@ -1,85 +1,49 @@
-## TEncDM: Understanding the Properties of Diffusion Model in the Space of Language Model Encodings
-
-Abstract: *This paper presents the Text Encoding Diffusion Model
-(TEncDM), a novel approach to diffusion modeling that op-
-erates in the space of pre-trained language model encodings.
-In contrast to traditionally used embeddings, encodings in-
-tegrate contextual information. In our approach, we also em-
-ploy a transformer-based decoder, specifically designed to in-
-corporate context in the token prediction process. We con-
-duct a comprehensive examination of the influence of the
-encoder, decoder, noise scheduler, and self-conditioning on
-zero-shot generation. Furthermore, we compare TEncDM
-with previous approaches on three conditional text genera-
-tion tasks: QQP, XSum, and Wiki-Auto. The results show that
-TEncDM exhibits superior performance compared to exist-
-ing non-autoregressive diffusion models.*
-
+## Smoothie: Smoothing Diffusion on Token Embeddings for Text Generation
 
 ## Requirements
 
 * Python libraries: See [requirements.txt](./requirements.txt) for exact library dependencies. You can use the following commands with Miniconda3 to create and activate your Python environment:
-  - `conda create --name tencdm python=3.9`
-  - `conda activate tencdm`
+  - `conda create --name smoothie python=3.9`
+  - `conda activate smoothie`
   - `conda install pip`
   - `pip install -r requirements.txt`
   - `python -m spacy download en`
 
 ## Dataset loading
 
-You can download any dataset used in the article with the following command:
+For Newsela-Auto and Quasar-T datasets you first need to download files `train.json`, `valid.json` and `test.json` from [DiffuSeq github](https://github.com/Shark-NLP/DiffuSeq/tree/main) and put them in the `./datasets/` folder.
 
+Then you should run the following command:
 ```
 python -m data.load --dataset_name=dataset_name
 ```
 
-where `'dataset_name'` is one of the following:
- - `'wikipedia'`
+For any other dataset used in the paper, you can run the command above without downloading anything.
+
+The `'dataset_name'` is one of the following:
  - `'rocstories'`
  - `'qqp'`
  - `'xsum'`
- - `'wiki-auto'`
+ - `'newsela-auto'`
+ - `'quasar_t`
 
-By default your datasets will be saved in the folder `'datasets'` in your working directory. If you want to specify another path, use the argument `'dataset_path'`
-## Statistics computation
-
-For proper diffusion model training you need to compute dataset statistics for any particular dataset and encoder with the following command:
-
-```
-python -m data.make_statistics --dataset_name=dataset_name --encoder_name=encoder_name
-```
-
-where `'encoder_name'` is one the following:
- - `'bert-base-cased'`
- - `'t5-base'`
- - `'roberta-base'`
- - `'bart-base'`
-
-Notice that default TEncDM encoder is `'bert-base-cased'`, but you can experiment with it
-
-
-## Decoder training
-Just as the statistics, you need to train a decoder for every pair of dataset and encoder. You can do this with the command:
-
-```
-python -m model.train_decoder --dataset_name=dataset_name --encoder_name=encoder_name
-```
 
 ## Diffusion training
 
-Finally, after training the decoder and computing dataset statistics, you can start training yout diffusion model. To train basic TEncdDM setup, run
+To train basic Smoothie setup, run
 
 ```
-torchrun --nproc_per_node=n train_diffusion.py --dataset_name=dataset_name --encoder_name=encoder_name
+torchrun --nproc_per_node=n train_diffusion.py --dataset_name dataset_name --smooth_diffusion
 ```
 
-You will train the best TEncDM network with this script. But you can also test other hyperparameters, such as:
+This script will train Smoothie model used in the paper.
 
-- `--emb` - wether to train using only embeddings, `default=False`
-- `--scheduler` - noise scheduler to use,`default='sd'`. Can be one of the following: `'sqrt'`, `'cosine'`, `'sd'`
-- `--coef_d` - coefficient for tangent scheduler, `default=9`
-- `--swap_cfg_coef` - classifier free guidance coefficient, `default=0.0`
-- `--project_name` - wandb project name, `default='tencdm'`
+## Diffusion evaluation
 
+To evaluate the trained model, run
 
-Notice: if you want to train your model on embeddings, you need to train decoder again with `--emb=True`
+```
+torchrun --nproc_per_node=n evaluate_diffusion.py --dataset_name dataset_name --smooth_diffusion --checkpoints_name checkpoints_name"
+```
+
+where `checkpoints_name` is a name of the folder with saved checkpoint. By default, it is `smoothie-{dataset_name}`

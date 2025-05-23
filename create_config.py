@@ -89,7 +89,6 @@ def create_config(args):
     config.use_self_cond = args.use_self_cond
     config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
-    config.embeddings_path = args.embeddings_path
     config.smooth_diffusion = args.smooth_diffusion
     config.tess_diffusion = args.tess_diffusion
     config.predict_tokens = args.predict_tokens
@@ -129,11 +128,11 @@ def create_config(args):
 
     if args.checkpoints_name is None:
         pref = ""
-        if config.embeddings_path is not None:
-            pref = config.embeddings_path.split('/')[-1]
         if args.smooth_diffusion:
             pref = f"smoothie"
-        training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}-{args.run_name}"
+        training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}"
+        if args.run_name:
+            training.checkpoints_prefix += f"-{args.run_name}"
     else:
         training.checkpoints_prefix = args.checkpoints_name
 
@@ -155,7 +154,7 @@ def create_se_config():
 
 def create_datasets_config(args):
     config = ml_collections.ConfigDict()
-    config.downstream_tasks = ["qqp", "xsum", "paradetox", "wiki_auto", "newsela_auto", "quasar_t"]
+    config.downstream_tasks = ["qqp", "xsum", "newsela_auto", "quasar_t"]
     if args.dataset_name is None:
         config.datasets_list = ["rocstories"]
     else:
@@ -204,7 +203,7 @@ def create_decoder_config():
     config.dataset = ""
     config.T = 0.15
     config.eps = 0.0
-    config.diffusion_forward = True
+    config.diffusion_forward = False
     config.suffix = ""
     config.num_hidden_layers = 3
 

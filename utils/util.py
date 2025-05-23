@@ -213,10 +213,7 @@ def parse():
         help='Sets dimensions for aggregation of embeddings values'
     )
     parser.add_argument(
-        "--add_special_tokens", type=bool, default=False, help='If set, add special tokens during tokenization'
-    )
-    parser.add_argument(
-        "--embeddings_path", type=str, default=None, help='Path to file with embedding matrix'
+        "--add_special_tokens", action='store_true', help='If set, add special tokens during tokenization'
     )
     parser.add_argument(
         "--encoder_name", type=str, default='bert-base-cased',
@@ -237,27 +234,27 @@ def parse():
         choices=['transformer'], help='Encoder to process condition for decoder'
     )
     parser.add_argument(
-        "--smooth_diffusion", type=bool, default=False, help='If set, use smoothing-like noising'
+        "--smooth_diffusion", action='store_true', help='If set, use smoothing-like noising'
     )
     parser.add_argument(
-        "--tess_diffusion", type=bool, default=False, help='If set, use tess diffusion process'
+        "--tess_diffusion", action='store_true', help='If set, use tess diffusion process'
     )
     parser.add_argument(
-        "--use_self_cond", type=bool, default=False, help='If set, use self-conditioning'
+        "--use_self_cond", action='store_true', help='If set, use self-conditioning'
     )
     parser.add_argument(
         "--self_cond_type", type=str, default='default', choices=['default', 'tess'], help='Type of self-conditioning'
     )
     parser.add_argument(
-        "--predict_tokens", type=bool, default=False, help='If set, predict logits instead of embeddings'
+        "--predict_tokens", action='store_true', help='If set, predict logits instead of embeddings'
     )
     parser.add_argument(
-        "--clamp", type=bool, default=False, help='If set, use clamping at generation'
+        "--clamp", action='store_true', help='If set, use clamping at generation'
     )
     parser.add_argument('--condition_type', type=str, default='cross-attention', choices=[
             "cross-attention", "concatenation",
         ], help='The type of conditioning for diffusion model')
-    parser.add_argument('--project_name', type=str, default='test')
+    parser.add_argument('--project_name', type=str, default='smoothie')
     parser.add_argument(
         "--run_name", type=str, default="", help='Run name'
     )
