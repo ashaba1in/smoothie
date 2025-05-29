@@ -194,7 +194,7 @@ class ScoreEstimatorEMB(nn.Module):
         )
 
         self.encoder = TransformerEncoder(config)
-        if config.condition_encoder == 'transformer':
+        if config.is_conditional and config.condition_encoder == 'transformer':
             self.condition_encoder = ConditionEncoder(config, num_hidden_layers=6)
 
         if self.use_self_cond and config.self_cond_type != 'tess':
@@ -258,15 +258,16 @@ class ScoreEstimatorEMB(nn.Module):
         hidden_t = self.time_emb(emb_t)
         hidden_t = hidden_t[:, None, :]
 
-        if self.config.condition_encoder == 'transformer':
-            cond = self.condition_encoder(cond, cond_mask)
+        if self.config.is_conditional:
+            if self.config.condition_encoder == 'transformer':
+                cond = self.condition_encoder(cond, cond_mask)
 
-        if self.condition_type == 'concatenation':
-            x_t = torch.cat((
-                x_t + self.sequence_embeddings(torch.tensor(0, device=x_t.device)),
-                cond + self.sequence_embeddings(torch.tensor(1, device=x_t.device))
-            ), dim=-2)
-            attention_mask = torch.cat((attention_mask, cond_mask), dim=-1)
+            if self.condition_type == 'concatenation':
+                x_t = torch.cat((
+                    x_t + self.sequence_embeddings(torch.tensor(0, device=x_t.device)),
+                    cond + self.sequence_embeddings(torch.tensor(1, device=x_t.device))
+                ), dim=-2)
+                attention_mask = torch.cat((attention_mask, cond_mask), dim=-1)
 
         seq_length = x_t.size(1)
         position_ids = self.position_ids[:, :seq_length]
@@ -282,7 +283,7 @@ class ScoreEstimatorEMB(nn.Module):
             cond_mask=cond_mask,
             x_0_self_cond=x_0_self_cond,
         )
-        if self.condition_type == 'concatenation':
+        if self.config.is_conditional and self.condition_type == 'concatenation':
             output = output[:, :self.config.max_sequence_len].contiguous()
 
         if self.config.predict_tokens:
