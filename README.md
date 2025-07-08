@@ -1,5 +1,7 @@
 ## Smoothie: Smoothing Diffusion on Token Embeddings for Text Generation
 
+Paper: https://arxiv.org/pdf/2505.18853
+
 ## Requirements
 
 * Python libraries: See [requirements.txt](./requirements.txt) for exact library dependencies. You can use the following commands with Miniconda3 to create and activate your Python environment:
