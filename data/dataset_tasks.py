@@ -44,17 +44,20 @@ class DownstreamTaskDatasetDDP:
         dt = load_from_disk(path)
         dt = self.split_data_across_gpu(dt)
 
-        self.dt = dt.map(
-            partial(
-                batch_preprocessing, split=self.split,
-                dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
-            ),
-            batched=True,
-            load_from_cache_file=False,
-            num_proc=30,
-            desc="Dataset preprocessing",
-            batch_size=1000,
-        )
+        if self.dataset_name == 'openwebtext':
+            self.dt = self.dt.rename_column('text', 'text_trg')
+        else:
+            self.dt = dt.map(
+                partial(
+                    batch_preprocessing, split=self.split,
+                    dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
+                ),
+                batched=True,
+                load_from_cache_file=False,
+                num_proc=30,
+                desc="Dataset preprocessing",
+                batch_size=1000,
+            )
         return self.dt
     
     def get_data(self):
