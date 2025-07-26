@@ -6,8 +6,7 @@ class Encoder(torch.nn.Module):
     def __init__(self, encoder_link='bert-base-cased', emb_statistics_agg_type='features'):
         super().__init__()
         self.encoder_link = encoder_link
-        self.encoder = AutoModel.from_pretrained(self.encoder_link)
-        self.embeddings = self.encoder.embeddings.word_embeddings.weight.cpu()
+        self.embeddings = AutoModel.from_pretrained(self.encoder_link).embeddings.word_embeddings.weight.cpu()
 
         used_ids, unused_ids = self.get_used_ids(encoder_link=encoder_link)
         if emb_statistics_agg_type == 'features':

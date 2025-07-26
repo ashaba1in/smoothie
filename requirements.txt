@@ -20,5 +20,3 @@ faiss-gpu==1.7.2
 scikit-learn==1.5.1
 mauve-text==0.3.0
 bert-score==0.3.13
-rouge==1.0.1
-rouge-score==0.1.2

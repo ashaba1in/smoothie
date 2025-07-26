@@ -860,6 +860,7 @@ class DiffusionRunner:
             sigma_0=self.config.dynamic.sigma_min,
             embeddings=self.encoder.embeddings,
         )
+        logits[:, :, 1:106] = -10000
         tokens = logits.argmax(-1)
         return tokens
 
