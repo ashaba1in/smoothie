@@ -50,6 +50,12 @@ class CosineSD(Scheduler):
         alpha_t = 1 / torch.sqrt(1 + tan ** 2 * self.d ** 2)
         std_t = torch.sqrt(1 - alpha_t ** 2)
         return torch.clip(alpha_t, 0, 1), torch.clip(std_t, 0, 1)
+    
+    def beta_t(self, t):
+        t = torch.clip(t, 0, self.t_thr)
+        tan = torch.tan(np.pi * t / 2)
+        beta_t = np.pi * self.d ** 2 * tan * (1 + tan ** 2) / (1 + self.d ** 2 * tan ** 2)
+        return beta_t
 
 
 class Sqrt(Scheduler):
@@ -87,6 +93,15 @@ class Arctan(Scheduler):
         alpha_t = 1 / self.sigma_bar(t)**4
         std_t = self.delta * torch.sqrt(1 - alpha_t)
         return torch.sqrt(alpha_t), std_t
+    
+    def beta_t(self, t):
+        t = torch.clip(t, 1 - self.t_thr, self.t_thr)
+        beta_t = (
+            4 * self.multiplier * self.d
+        ) / (
+            np.pi * (self.d**2 * (1 - t) + t) * torch.sqrt(t * (1 - t)) * self.sigma_bar(t)
+        )
+        return beta_t
 
 
 class TessScheduler(Scheduler):
