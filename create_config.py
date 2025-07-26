@@ -110,8 +110,6 @@ def create_config(args):
     decoder.condition_type = 'cross-attention'
     decoder.condition_encoder = args.decoder_condition_encoder
     decoder.decoder_path = f"{data.base_path}/{data.datasets.datasets_list[0]}/{decoder.name}.pth"
-    if decoder.max_sequence_len < data.max_sequence_len:
-        raise Exception("Decoder max_sequence_len is less than required")
 
     config.se_config = create_se_config()
     config.se_config.is_conditional = config.is_conditional
