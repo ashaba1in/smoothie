@@ -1,5 +1,6 @@
 import os
 import wandb
+import neptune
 import random
 import torch
 import torch.nn.functional as F
@@ -104,11 +105,17 @@ class DiffusionRunner:
         self.tracked_test_metric = dict()  # step -- metric value
 
         if self.config.ddp and dist.get_rank() == 0 and run_wandb:
-            wandb.init(
+            # wandb.init(
+            #     project=self.config.project_name,
+            #     name=self.config.training.checkpoints_prefix,
+            #     config=dict(self.config),
+            # )
+            self.neptune_run = neptune.init_run(
                 project=self.config.project_name,
-                name=self.config.training.checkpoints_prefix,
-                config=dict(self.config),
+                api_token=self.config.neptune_api_token,
+                name=self.config.training.checkpoints_prefix
             )
+            self.neptune_run["parameters"] = dict(self.config)
 
         if eval:
             self.restore_parameters(self.device)
@@ -353,7 +360,8 @@ class DiffusionRunner:
 
     def log_metric(self, metric_name: str, loader_name: str, value: Union[float, torch.Tensor, wandb.Image]):
         if dist.is_initialized() and dist.get_rank() == 0:
-            wandb.log({f'{metric_name}/{loader_name}': value}, step=self.step)
+            # wandb.log({f'{metric_name}/{loader_name}': value}, step=self.step)
+            self.neptune_run[f'{metric_name}/{loader_name}'].append(value)
 
     def optimizer_step(self, loss: torch.Tensor):
         self.optimizer.zero_grad()

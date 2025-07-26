@@ -130,6 +130,8 @@ def create_config(args):
     config.se_config.sigma_min = args.sigma_min
 
     config.project_name = args.project_name
+    config.neptune_api_token = open('neptune_token.txt', 'r').read()
+
     config.timesteps = "linear"
 
     if args.checkpoints_name is None:
