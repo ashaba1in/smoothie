@@ -15,7 +15,7 @@ class DownstreamTaskDatasetDDP:
         self.config = config
         self.dataset_name = dataset_name
         self.base_path = f"{config.data.base_path}/{dataset_name}"
-        
+
         self.device_id = dist.get_rank() if torch.distributed.is_initialized() else 0
         self.total_device_number = dist.get_world_size() if torch.distributed.is_initialized() else 1
         self.epoch = 0
@@ -43,7 +43,7 @@ class DownstreamTaskDatasetDDP:
         path = f"{self.base_path}/{self.split}"
         dt = load_from_disk(path)
         dt = self.split_data_across_gpu(dt)
-        
+
         self.dt = dt.map(
             partial(
                 batch_preprocessing, split=self.split,

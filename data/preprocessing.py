@@ -42,6 +42,10 @@ def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
         new_batch = {
             "text_trg": batch["target"],
         }
+    elif dataset_name == "openwebtext":
+        new_batch = {
+            "text_trg": batch["text"],
+        }
     else:
         raise Exception(f"Unknown dataset: {dataset_name}")
 

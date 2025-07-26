@@ -52,6 +52,14 @@ def download_rocstory(dataset_path):
     dt.save_to_disk(dataset_path)
 
 
+def download_openwebtext(dataset_path):
+    train_dt = load_dataset('openwebtext', split='train[:-100000]', cache_dir='~/.cache/huggingface/datasets/')
+    val_dt = load_dataset('openwebtext', split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/')
+
+    dataset = DatasetDict({'train': train_dt, 'validation': val_dt})
+    dataset.save_to_disk(dataset_path)
+
+
 def process_diffuseq_dataset(dataset_path):
     splits = ['train', 'valid', 'test']
     dataset = {split: {'src': [], 'trg': []} for split in splits}
@@ -80,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto"
+            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext"
         ],
         required=True,
     )
@@ -91,11 +99,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.dataset_name == "rocstories":
-        download_rocstory(args.dataset_path + args.dataset_name)
-    elif args.dataset_name == "qqp":
-        download_qqp(args.dataset_path + args.dataset_name)
-    elif args.dataset_name == "xsum":
-        download_xsum(args.dataset_path + args.dataset_name)
-    elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
-        process_diffuseq_dataset(args.dataset_path + args.dataset_name)
+    if not os.path.isfile(args.dataset_path + args.dataset_name):
+        if args.dataset_name == "rocstories":
+            download_rocstory(args.dataset_path + args.dataset_name)
+        if args.dataset_name == "openwebtext":
+            download_openwebtext(args.dataset_path + args.dataset_name)
+        elif args.dataset_name == "qqp":
+            download_qqp(args.dataset_path + args.dataset_name)
+        elif args.dataset_name == "xsum":
+            download_xsum(args.dataset_path + args.dataset_name)
+        elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
+            process_diffuseq_dataset(args.dataset_path + args.dataset_name)

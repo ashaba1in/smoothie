@@ -87,7 +87,13 @@ def create_config(args):
     config.seed = 0
     config.ddp = True
     config.use_self_cond = args.use_self_cond
-    config.is_conditional = False if 'rocstories' in data.datasets.datasets_list or 'wikipedia' in data.datasets.datasets_list else True
+    if 'rocstories' in data.datasets.datasets_list or \
+        'wikipedia' in data.datasets.datasets_list or \
+        'openwebtext' in data.datasets.datasets_list:
+        config.is_conditional = False
+    else:
+        config.is_conditional = True
+
     config.emb_statistics_agg_type = args.emb_statistics_agg_type
     config.smooth_diffusion = args.smooth_diffusion
     config.tess_diffusion = args.tess_diffusion
@@ -164,6 +170,7 @@ def create_datasets_config(args):
                        "tracked_metric": "mauve"},
         "wikipedia": {"metrics": ["mauve", "div", "ppl"],
                       "tracked_metric": "mauve"},
+        "openwebtext": {"metrics": ["div", "ppl"], "tracked_metric": "ppl"},
         "qqp": {
             "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
             "tracked_metric": "bert-score",
@@ -214,6 +221,7 @@ def get_sequence_len(dataset_name):
     data = {
         "wikipedia": 128,
         "rocstories": 80,
+        "openwebtext": 1024,
         "qqp": 50,
         "xsum": 64,
         "wiki_auto": 100,
@@ -227,6 +235,7 @@ def get_context_len(dataset_name):
     data = {
         "wikipedia": 128,
         "rocstories": 80,
+        "openwebtext": 1024,
         "qqp": 50,
         "xsum": 512,
         "wiki_auto": 100,
