@@ -49,6 +49,10 @@ def compute_ppl(predictions, model_id='gpt2-large'):
         return 0
 
     eval_tokenizer = AutoTokenizer.from_pretrained(model_id)
+    if eval_tokenizer.pad_token is None:
+        eval_tokenizer.pad_token = eval_tokenizer.eos_token
+        eval_tokenizer.pad_token_id = eval_tokenizer.eos_token_id
+
     eval_model = AutoModelForCausalLM.from_pretrained(model_id).eval().cuda()
 
     samples = eval_tokenizer(
