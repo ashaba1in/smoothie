@@ -3,12 +3,12 @@ from transformers import AutoModel, AutoTokenizer
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, encoder_link='bert-base-cased', emb_statistics_agg_type='features'):
+    def __init__(self, encoder_name='bert-base-cased', emb_statistics_agg_type='features'):
         super().__init__()
-        self.encoder_link = encoder_link
-        self.embeddings = AutoModel.from_pretrained(self.encoder_link).embeddings.word_embeddings.weight.cpu()
+        self.encoder_name = encoder_name
+        self.embeddings = AutoModel.from_pretrained(self.encoder_name).embeddings.word_embeddings.weight.cpu()
 
-        used_ids, unused_ids = self.get_used_ids(encoder_link=encoder_link)
+        used_ids, unused_ids = self.get_used_ids(encoder_name=encoder_name)
         if emb_statistics_agg_type == 'features':
             self.dim = 0
         elif emb_statistics_agg_type == 'total':
@@ -25,9 +25,9 @@ class Encoder(torch.nn.Module):
         return self.embeddings[input_ids]
 
     @staticmethod
-    def get_used_ids(encoder_link: str) -> tuple[list[int], list[int]]:
+    def get_used_ids(encoder_name: str) -> tuple[list[int], list[int]]:
         """Function to get ids to filter unused ids of BERT"""
-        vocab = AutoTokenizer.from_pretrained(encoder_link).vocab
+        vocab = AutoTokenizer.from_pretrained(encoder_name).vocab
         used_ids = []
         unused_ids = []
         for key in vocab.keys():

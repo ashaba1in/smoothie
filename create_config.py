@@ -11,7 +11,7 @@ def create_config(args):
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
-    training.training_iters = 500_000 * training.accum_batch_steps
+    training.training_iters = 1_000_000 * training.accum_batch_steps
     training.training_iters = training.training_iters
     training.checkpoint_freq = 25_000 * training.accum_batch_steps
     training.eval_freq = 25_000 * training.accum_batch_steps
@@ -56,18 +56,6 @@ def create_config(args):
     model.loss = "L_x_0"
     model.encoder_name = args.encoder_name
 
-    if args.encoder_link is None:
-        if "bert" in model.encoder_name.lower():
-            model.encoder_link = 'google-bert/bert-base-cased'
-        elif "roberta" in model.encoder_name.lower():
-            model.encoder_link = 'FacebookAI/roberta-base'
-        elif "t5" in model.encoder_name.lower():
-            model.encoder_link = 'google-t5/t5-base'
-        elif "bart" in model.encoder_name.lower():
-            model.encoder_link = 'facebook/bart-base'
-    else:
-        model.encoder_link = args.encoder_link
-
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
     model.conditional_encoder_name_hash = model.conditional_encoder_name.replace("/", "-")
@@ -111,9 +99,9 @@ def create_config(args):
     decoder.condition_encoder = args.decoder_condition_encoder
     decoder.decoder_path = f"{data.base_path}/{data.datasets.datasets_list[0]}/{decoder.name}.pth"
 
-    config.se_config = create_se_config()
+    config.se_config = create_se_config(model.encoder_name)
     config.se_config.is_conditional = config.is_conditional
-    config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_link).vocab_size
+    config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_name).vocab_size
     config.se_config.use_self_cond = config.use_self_cond
     config.se_config.self_cond_type = args.self_cond_type
     config.se_config.predict_tokens = config.predict_tokens
@@ -152,8 +140,8 @@ def create_config(args):
     return config
 
 
-def create_se_config():
-    se_config = AutoConfig.from_pretrained("bert-base-cased")
+def create_se_config(encoder_name):
+    se_config = AutoConfig.from_pretrained(encoder_name)
     se_config.attention_head_size = se_config.hidden_size / se_config.num_attention_heads
     return se_config
 

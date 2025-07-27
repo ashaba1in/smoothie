@@ -205,10 +205,10 @@ def main():
 
     config = create_config(args)
     encoder = Encoder(
-        config.model.encoder_link,
+        config.model.encoder_name,
         emb_statistics_agg_type=config.emb_statistics_agg_type,
     ).eval()
-    tokenizer = AutoTokenizer.from_pretrained(encoder.encoder_link)
+    tokenizer = AutoTokenizer.from_pretrained(encoder.encoder_name)
 
     encoder = torch.nn.DataParallel(encoder).cuda()
     decoder = Decoder(decoder_config=config.decoder, diffusion_config=config.se_config).train().cuda()

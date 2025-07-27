@@ -45,7 +45,7 @@ class DiffusionRunner:
         self.config = config
 
         # Diffusion Encoder
-        encoder_name = config.model.encoder_link
+        encoder_name = config.model.encoder_name
         self.tokenizer = AutoTokenizer.from_pretrained(encoder_name)
         self.encoder = Encoder(
             encoder_name,

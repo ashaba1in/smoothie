@@ -221,9 +221,9 @@ def parse():
             "bert-base-cased",
             "t5-base",
             "roberta-base",
-            "bart-base"
+            "bart-base",
+            "bert-large-cased"
         ])
-    parser.add_argument('--encoder_link', type=str, default=None, help='Encoder path')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     parser.add_argument(
         '--condition_encoder', type=str, default="transformer",
