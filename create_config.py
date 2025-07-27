@@ -32,7 +32,7 @@ def create_config(args):
     optim.eps = 1e-6
 
     validation = config.validation = ml_collections.ConfigDict()
-    validation.batch_size = 100
+    validation.batch_size = training.batch_size
     validation.num_gen_texts = args.num_gen_texts
     validation.texts_path = f"{config.work_dir}/generated_texts"
     validation.cfg_coef = 0.
