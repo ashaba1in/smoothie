@@ -45,7 +45,7 @@ class DownstreamTaskDatasetDDP:
         dt = self.split_data_across_gpu(dt)
 
         if self.dataset_name == 'openwebtext':
-            self.dt = self.dt.rename_column('text', 'text_trg')
+            self.dt = dt.rename_column('text', 'text_trg')
         else:
             self.dt = dt.map(
                 partial(

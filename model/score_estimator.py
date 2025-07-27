@@ -204,10 +204,10 @@ class ScoreEstimatorEMB(nn.Module):
         if self.condition_type == 'concatenation':
             self.sequence_embeddings = torch.nn.Embedding(2, self._hidden_layer_dim)
 
-        if self.condition_type != 'concatenation':
-            self._max_position_embeddings = self.config.max_position_embeddings
-        else:
+        if self.condition_type == 'concatenation':
             self._max_position_embeddings = self.config.max_sequence_len + self.config.max_context_len
+        else:
+            self._max_position_embeddings = self.config.max_sequence_len
 
         self.register_buffer("position_ids", torch.arange(self._max_position_embeddings).expand((1, -1)))
         self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
