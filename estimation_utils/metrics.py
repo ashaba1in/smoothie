@@ -63,7 +63,7 @@ def compute_ppl(predictions, model_id='gpt2-large'):
         truncation=True,
         padding=True,
         max_length=eval_tokenizer.model_max_length,
-    ).cuda()
+    ).to('cuda')
     attn_mask = samples['attention_mask']
     samples = samples['input_ids']
 
@@ -80,7 +80,7 @@ def compute_ppl(predictions, model_id='gpt2-large'):
 
         nlls = F.cross_entropy(logits[..., :-1], _samples[..., 1:], reduction='none')
 
-        nll_sum += nlls[_attn_mask[..., :-1]].sum()
+        nll_sum += nlls[_attn_mask[..., :-1].bool()].sum()
         n_tokens += _attn_mask[..., :-1].sum()
 
     ppl = torch.exp(nll_sum / n_tokens)

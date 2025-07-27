@@ -7,6 +7,9 @@ from utils.util import set_seed, parse
 from create_config import create_config
 
 
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
+
 if __name__ == '__main__':
     args = parse()
     
