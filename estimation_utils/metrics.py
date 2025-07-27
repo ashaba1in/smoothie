@@ -2,9 +2,10 @@ import torch
 from evaluate import load
 from nltk.util import ngrams
 from collections import defaultdict
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import spacy
 import numpy as np
+import torch.nn.functional as F
 
 
 def compute_metric(metric_name, predictions, references, sources=None, **kwargs):
@@ -47,17 +48,50 @@ def compute_ppl(predictions, model_id='gpt2-large'):
     if len(predictions) == 0:
         return 0
 
-    perplexity = load("perplexity", module_type="metric", model_id=model_id)
-    ppl_list = perplexity.compute(
-        predictions=predictions,
-        model_id=model_id,
-        device='cuda',
-        add_start_token=True,
-    )["perplexities"]
-    ppl_list = np.sort(ppl_list)
-    quantile = 0.05
-    a_min, a_max = int(quantile * len(ppl_list)), int((1 - quantile) * len(ppl_list))
-    ppl = np.mean(ppl_list[a_min: a_max])
+    eval_tokenizer = AutoTokenizer.from_pretrained(model_id)
+    eval_model = AutoModelForCausalLM.from_pretrained(model_id).eval().cuda()
+
+    samples = eval_tokenizer(
+        predictions,
+        return_tensors='pt',
+        return_token_type_ids=False,
+        return_attention_mask=True,
+        truncation=True,
+        padding=True,
+        max_length=eval_tokenizer.model_max_length,
+    ).cuda()
+    attn_mask = samples['attention_mask']
+    samples = samples['input_ids']
+
+    batch_size = min(8, samples.shape[0])
+    num_batches = samples.shape[0] // batch_size
+
+    nll_sum = 0
+    n_tokens = 0
+    for i in range(num_batches):
+        _samples = samples[i*batch_size:(i+1)*batch_size]
+        _attn_mask = attn_mask[i*batch_size:(i+1)*batch_size]
+        logits = eval_model(_samples, attention_mask=_attn_mask)[0]
+        logits = logits.transpose(-1, -2)
+
+        nlls = F.cross_entropy(logits[..., :-1], _samples[..., 1:], reduction='none')
+
+        nll_sum += nlls[_attn_mask[..., :-1]].sum()
+        n_tokens += _attn_mask[..., :-1].sum()
+
+    ppl = torch.exp(nll_sum / n_tokens)
+
+    # perplexity = load("perplexity", module_type="metric", model_id=model_id)
+    # ppl_list = perplexity.compute(
+    #     predictions=predictions,
+    #     model_id=model_id,
+    #     device='cuda',
+    #     add_start_token=True,
+    # )["perplexities"]
+    # ppl_list = np.sort(ppl_list)
+    # quantile = 0.05
+    # a_min, a_max = int(quantile * len(ppl_list)), int((1 - quantile) * len(ppl_list))
+    # ppl = np.mean(ppl_list[a_min: a_max])
     return ppl
 
 
