@@ -512,7 +512,7 @@ class DiffusionRunner:
             clean_x = convert_to_tess_simplex(
                 batch['input_ids_trg'],
                 self.config.dynamic.simplex_value,
-                self.encoder.encoder.config.vocab_size
+                self.config.se_config.vocab_size
             )
         noise = torch.randn_like(clean_x)
         x_0_self_cond = torch.zeros_like(target)
@@ -671,7 +671,7 @@ class DiffusionRunner:
             )
         elif self.config.tess_diffusion:
             x_0 = convert_to_tess_simplex(
-                tokens, self.config.dynamic.simplex_value, self.encoder.encoder.config.vocab_size
+                tokens, self.config.dynamic.simplex_value, self.config.se_config.vocab_size
             )
         else:
             x_0 = predicted_embs
@@ -705,7 +705,7 @@ class DiffusionRunner:
             clean_x = convert_to_tess_simplex(
                 batch['input_ids_trg'],
                 self.config.dynamic.simplex_value,
-                self.encoder.encoder.config.vocab_size
+                self.config.se_config.vocab_size
             )
 
         batch_size = clean_x.size(0)
@@ -888,19 +888,19 @@ class DiffusionRunner:
             shape = (
                 batch_size,
                 self.config.data.max_sequence_len,
-                self.encoder.encoder.config.vocab_size
+                self.config.se_config.vocab_size
             )
         else:
             shape = (
                 batch_size,
                 self.config.data.max_sequence_len,
-                self.encoder.encoder.config.hidden_size
+                self.config.se_config.hidden_size
             )
 
         if x is None:
             x = self.dynamic.prior_sampling(shape).to(self.device)
         x_0_self_cond = torch.zeros(
-            *shape[:-1], self.encoder.encoder.config.hidden_size, dtype=x.dtype, device=x.device
+            *shape[:-1], self.config.se_config.hidden_size, dtype=x.dtype, device=x.device
         )
 
         timesteps = torch.linspace(self.dynamic.T, eps_t, self.dynamic.N + 1, device=self.device)

@@ -55,7 +55,6 @@ def create_config(args):
     model.prediction = "x_0"
     model.loss = "L_x_0"
     model.encoder_name = args.encoder_name
-
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
     model.conditional_encoder_name_hash = model.conditional_encoder_name.replace("/", "-")
