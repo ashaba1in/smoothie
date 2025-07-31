@@ -42,12 +42,12 @@ class DownstreamTaskDatasetDDP:
     def load_data(self):
         path = f"{self.base_path}/{self.split}"
         dt = load_from_disk(path)
-        if self.dataset_name == 'openwebtext' and self.split == 'test':
+        if self.config.is_conditional and self.split == 'test':
             dt = dt.select(range(5000))
 
         dt = self.split_data_across_gpu(dt)
 
-        if self.dataset_name == 'openwebtext':
+        if self.dataset_name == 'openwebtext' or self.dataset_name == 'wikipedia':
             self.dt = dt.rename_column('text', 'text_trg')
         else:
             self.dt = dt.map(
