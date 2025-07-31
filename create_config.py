@@ -155,8 +155,8 @@ def create_datasets_config(args):
     config.metrics = {
         "rocstories": {"metrics": ["mauve", "div", "ppl"],
                        "tracked_metric": "mauve"},
-        "wikipedia": {"metrics": ["mauve", "div", "ppl"],
-                      "tracked_metric": "mauve"},
+        "wikipedia": {"metrics": ["div", "ppl"],
+                      "tracked_metric": "ppl"},
         "openwebtext": {"metrics": ["div", "ppl"], "tracked_metric": "ppl"},
         "qqp": {
             "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
@@ -206,7 +206,7 @@ def create_decoder_config():
 
 def get_sequence_len(dataset_name):
     data = {
-        "wikipedia": 128,
+        "wikipedia": 512,
         "rocstories": 80,
         "openwebtext": 1024,
         "qqp": 50,
@@ -220,7 +220,7 @@ def get_sequence_len(dataset_name):
 
 def get_context_len(dataset_name):
     data = {
-        "wikipedia": 128,
+        "wikipedia": 512,
         "rocstories": 80,
         "openwebtext": 1024,
         "qqp": 50,

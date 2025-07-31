@@ -54,11 +54,21 @@ def download_rocstory(dataset_path):
 
 def download_openwebtext(dataset_path):
     train_dt = load_dataset('openwebtext', split='train[:-100000]', cache_dir='~/.cache/huggingface/datasets/')
-    val_dt = load_dataset('openwebtext', split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/')
+    tes_dt = load_dataset('openwebtext', split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/')
 
-    dataset = DatasetDict({'train': train_dt, 'validation': val_dt})
+    dataset = DatasetDict({'train': train_dt, 'test': tes_dt})
     dataset.save_to_disk(dataset_path)
 
+def download_wikipedia(dataset_path):
+    train_dt = load_dataset(
+        "wikimedia/wikipedia", "20231101.en", split='train[:-100000]', cache_dir='~/.cache/huggingface/datasets/'
+    )
+    tes_dt = load_dataset(
+        "wikimedia/wikipedia", "20231101.en", split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/'
+    )
+
+    dataset = DatasetDict({'train': train_dt, 'test': tes_dt})
+    dataset.save_to_disk(dataset_path)
 
 def process_diffuseq_dataset(dataset_path):
     splits = ['train', 'valid', 'test']
@@ -88,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext"
+            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext", 'wikipedia'
         ],
         required=True,
     )
@@ -104,6 +114,8 @@ if __name__ == "__main__":
             download_rocstory(args.dataset_path + args.dataset_name)
         if args.dataset_name == "openwebtext":
             download_openwebtext(args.dataset_path + args.dataset_name)
+        if args.dataset_name == "wikipedia":
+            download_wikipedia(args.dataset_path + args.dataset_name)
         elif args.dataset_name == "qqp":
             download_qqp(args.dataset_path + args.dataset_name)
         elif args.dataset_name == "xsum":

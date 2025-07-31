@@ -23,7 +23,7 @@ class DownstreamTaskDatasetDDP:
         self.max_context_len = config.data.max_context_len
         self.max_sequence_len = config.data.max_sequence_len
         
-    def split_data_across_gpu(self, dt: List[str]):
+    def split_data_across_gpu(self, dt):
         self.epoch += 1
         if self.split == "train":
             indexes = np.random.default_rng(seed=self.epoch).permutation(len(dt))
@@ -36,8 +36,8 @@ class DownstreamTaskDatasetDDP:
             indexes = indexes[start_ind:]
         else:
             indexes = indexes[start_ind: end_ind]
-        
-        return Dataset.from_dict(dt[indexes])
+
+        return dt.select(indexes)
 
     def load_data(self):
         path = f"{self.base_path}/{self.split}"
