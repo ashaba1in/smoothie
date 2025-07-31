@@ -188,7 +188,7 @@ def parse():
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "qqp", "xsum", "newsela_auto", "quasar_t", "openwebtext"
+            "rocstories", "qqp", "xsum", "newsela_auto", "quasar_t", "openwebtext", "wikipedia"
         ],
         required=False,
     )
