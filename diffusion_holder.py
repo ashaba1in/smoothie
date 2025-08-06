@@ -2,6 +2,7 @@ import os
 import wandb
 import neptune
 import random
+import numpy as np
 import torch
 import torch.nn.functional as F
 import ml_collections
@@ -382,6 +383,13 @@ class DiffusionRunner:
         self.grad_scaler.step(self.optimizer)
         self.grad_scaler.update()
 
+        # My custom strategy
+        scale = self.grad_scaler._scale.item()
+        max_scale = 2 ** 30
+        min_scale = 4096
+        scale = np.clip(scale, min_scale, max_scale)
+        self.grad_scaler.update(new_scale=scale)
+
         self.ema.update(self.score_estimator.parameters())
         self.scheduler.step_update(self.step)
         return grad_norm
@@ -526,7 +534,8 @@ class DiffusionRunner:
             x_t = marg_forward['x_t']
 
             if self.config.smooth_diffusion or self.config.tess_diffusion:
-                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+                with torch.no_grad():
+                    model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
             # model prediction
@@ -634,7 +643,8 @@ class DiffusionRunner:
         params = self.dynamic.marginal_params(t)
         if self.config.smooth_diffusion or self.config.tess_diffusion:
             # x_t is [bs, seq_len, V]
-            model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+            with torch.no_grad():
+                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
             # x_t is [bs, seq_len, hidden_size]
             model_input = x_t
@@ -718,7 +728,8 @@ class DiffusionRunner:
         x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
         if self.config.use_self_cond and random.random() > 0.5:
             if self.config.smooth_diffusion or self.config.tess_diffusion:
-                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+                with torch.no_grad():
+                    model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
 
@@ -736,7 +747,8 @@ class DiffusionRunner:
                         )
 
         if self.config.smooth_diffusion or self.config.tess_diffusion:
-            model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+            with torch.no_grad():
+                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
             model_input = x_t
         # model prediction

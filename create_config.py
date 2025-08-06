@@ -122,8 +122,10 @@ def create_config(args):
     if args.checkpoints_name is None:
         pref = ""
         if args.smooth_diffusion:
-            pref = f"smoothie"
-        training.checkpoints_prefix = f"{pref}-{data.datasets.datasets_list[0]}"
+            pref = f"smoothie-"
+        if args.tess_diffusion:
+            pref = f"tess-"
+        training.checkpoints_prefix = f"{pref}{data.datasets.datasets_list[0]}"
         if args.run_name:
             training.checkpoints_prefix += f"-{args.run_name}"
     else:
