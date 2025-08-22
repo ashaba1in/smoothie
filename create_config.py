@@ -143,7 +143,9 @@ def create_config(args):
 
 def create_se_config(encoder_name):
     se_config = AutoConfig.from_pretrained(encoder_name)
-    se_config.attention_head_size = se_config.hidden_size / se_config.num_attention_heads
+    se_config.attention_head_size = se_config.hidden_size // se_config.num_attention_heads
+    se_config.rope_theta = 1000000.0
+    se_config.layer_norm_eps = 1e-05
     return se_config
 
 

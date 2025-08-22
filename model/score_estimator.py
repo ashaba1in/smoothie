@@ -6,7 +6,7 @@ import math
 from typing import Optional, Tuple
 
 from transformers import AutoModel
-from llama_blocks import LlamaBlock
+from .llama_blocks import LlamaBlock
 from transformers.models.bert.modeling_bert import BertAttention, BertIntermediate, BertOutput, \
     apply_chunking_to_forward
 
@@ -202,14 +202,13 @@ class ScoreEstimatorEMB(nn.Module):
         self.condition_type = config.condition_type if config.is_conditional else None
         if self.condition_type == 'concatenation':
             self.sequence_embeddings = torch.nn.Embedding(2, self._hidden_layer_dim)
-
-        if self.condition_type == 'concatenation':
             self._max_position_embeddings = self.config.max_sequence_len + self.config.max_context_len
         else:
             self._max_position_embeddings = self.config.max_sequence_len
 
         self.register_buffer("position_ids", torch.arange(self._max_position_embeddings).expand((1, -1)))
-        self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
+        if config.model_type == 'bert':
+            self.position_embeddings = torch.nn.Embedding(self._max_position_embeddings, self._hidden_layer_dim)
 
         if config.self_cond_type == 'tess':
             self.embeddings = AutoModel.from_pretrained('bert-base-cased').embeddings.word_embeddings.weight.data
