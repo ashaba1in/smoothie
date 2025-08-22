@@ -943,7 +943,7 @@ class DiffusionRunner:
         self.score_estimator.eval()
         self.ddp_score_estimator.eval()
         self.switch_to_ema()
-        
+
         result_dict = dict()
         
         # Generation
@@ -983,7 +983,7 @@ class DiffusionRunner:
             if not os.path.exists(prefix_folder):
                 os.makedirs(prefix_folder)
 
-            file_name = f"{self.step}-N={self.config.dynamic.N}-len={len(result_list)}.json"
+            file_name = f"{self.step}-N={self.config.dynamic.N}.json"
             save_path = os.path.join(prefix_folder, file_name)
             json.dump(result_list, open(save_path, "w"), indent=4)
             print(f"Texts are saved in {save_path}")

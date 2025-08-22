@@ -195,6 +195,9 @@ def parse():
     parser.add_argument(
         "--training_epochs", type=int, default=None, help='Number of training epochs. Used for decoder'
     )
+    parser.add_argument(
+        "--training_iters", type=int, default=1_000_000, help='Number of training iterations for diffusion'
+    )
     parser.add_argument("--local-rank", type=int, default=None)
     parser.add_argument("--swap_cfg_coef", type=float, default=0.)
     parser.add_argument("--scheduler", type=str, default='arctan')
@@ -224,6 +227,7 @@ def parse():
             "bart-base",
             "bert-large-cased"
         ])
+    parser.add_argument('--model_type', type=str, default='llama', help='Type of diffusion model architecture')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     parser.add_argument(
         '--condition_encoder', type=str, default="transformer",

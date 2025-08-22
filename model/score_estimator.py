@@ -6,6 +6,7 @@ import math
 from typing import Optional, Tuple
 
 from transformers import AutoModel
+from llama_blocks import LlamaBlock
 from transformers.models.bert.modeling_bert import BertAttention, BertIntermediate, BertOutput, \
     apply_chunking_to_forward
 
@@ -64,12 +65,10 @@ class BertBlock(nn.Module):
         return layer_output
 
 
-TransformerBlock = BertBlock
-
-
 class TransformerEncoder(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
+        TransformerBlock = BertBlock if config.model_type == 'bert' else LlamaBlock
 
         self.use_self_cond = config.use_self_cond
         self.num_hidden_layers = config.num_hidden_layers
@@ -252,7 +251,9 @@ class ScoreEstimatorEMB(nn.Module):
                 x_t = 0.5 * (x_t + torch.softmax(self_cond_D, dim=-1) @ self.embeddings.to(self_cond_D.device))
                 x_0_self_cond = None
             else:
-                x_0_self_cond = self.self_condition_encoder(x_0_self_cond)
+                position_ids = self.position_ids[:, :x_0_self_cond.shape[1]]
+                self_cond_emb_pos = self.position_embeddings(position_ids)
+                x_0_self_cond = self.self_condition_encoder(x_0_self_cond + self_cond_emb_pos)
 
         emb_t = timestep_embedding(time_t, self._hidden_layer_dim)
         hidden_t = self.time_emb(emb_t)
@@ -260,7 +261,9 @@ class ScoreEstimatorEMB(nn.Module):
 
         if self.config.is_conditional:
             if self.config.condition_encoder == 'transformer':
-                cond = self.condition_encoder(cond, cond_mask)
+                position_ids = self.position_ids[:, :cond.shape[1]]
+                cond_emb_pos = self.position_embeddings(position_ids)
+                cond = self.condition_encoder(cond + cond_emb_pos, cond_mask)
 
             if self.condition_type == 'concatenation':
                 x_t = torch.cat((
@@ -269,11 +272,12 @@ class ScoreEstimatorEMB(nn.Module):
                 ), dim=-2)
                 attention_mask = torch.cat((attention_mask, cond_mask), dim=-1)
 
-        seq_length = x_t.size(1)
-        position_ids = self.position_ids[:, :seq_length]
-        emb_pos = self.position_embeddings(position_ids)
-
-        hidden_state = x_t + emb_pos
+        hidden_state = x_t
+        if self.config.model_type == 'bert':
+            seq_length = x_t.shape[1]
+            position_ids = self.position_ids[:, :seq_length]
+            emb_pos = self.position_embeddings(position_ids)
+            hidden_state = hidden_state + emb_pos
 
         output = self.encoder(
             x=hidden_state,

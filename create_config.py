@@ -11,8 +11,7 @@ def create_config(args):
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
-    training.training_iters = 1_000_000 * training.accum_batch_steps
-    training.training_iters = training.training_iters
+    training.training_iters = args.training_iters * training.accum_batch_steps
     training.checkpoint_freq = 25_000 * training.accum_batch_steps
     training.eval_freq = 25_000 * training.accum_batch_steps
     training.batch_size = args.batch_size // training.accum_batch_steps
@@ -113,6 +112,7 @@ def create_config(args):
     config.se_config.condition_type = args.condition_type
     config.se_config.condition_encoder = args.condition_encoder
     config.se_config.sigma_min = args.sigma_min
+    config.se_config.model_type = args.model_type
 
     config.project_name = args.project_name
     config.neptune_api_token = open('neptune_token.txt', 'r').read()
@@ -135,7 +135,7 @@ def create_config(args):
 
     config.tracked_dataset = data.datasets.datasets_list[0]
     config.tracked_metric = data.datasets.metrics[config.tracked_dataset]["tracked_metric"]
-    config.higher_better = True
+    config.higher_better = False if config.tracked_metric == 'ppl' else True
     config.save_top_k = 2
 
     return config
@@ -157,8 +157,8 @@ def create_datasets_config(args):
     config.metrics = {
         "rocstories": {"metrics": ["mauve", "div", "ppl"],
                        "tracked_metric": "mauve"},
-        "wikipedia": {"metrics": ["div", "ppl"],
-                      "tracked_metric": "ppl"},
+        "wikipedia": {"metrics": ["mauve", "div", "ppl"],
+                      "tracked_metric": "mauve"},
         "openwebtext": {"metrics": ["div", "ppl"], "tracked_metric": "ppl"},
         "qqp": {
             "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
@@ -208,7 +208,7 @@ def create_decoder_config():
 
 def get_sequence_len(dataset_name):
     data = {
-        "wikipedia": 512,
+        "wikipedia": 256,
         "rocstories": 80,
         "openwebtext": 1024,
         "qqp": 50,
@@ -222,7 +222,7 @@ def get_sequence_len(dataset_name):
 
 def get_context_len(dataset_name):
     data = {
-        "wikipedia": 512,
+        "wikipedia": 256,
         "rocstories": 80,
         "openwebtext": 1024,
         "qqp": 50,

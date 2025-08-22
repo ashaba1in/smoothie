@@ -63,7 +63,7 @@ def compute_ppl(predictions, model_id='gpt2-large'):
         truncation=True,
         padding=True,
         max_length=eval_tokenizer.model_max_length,
-    ).to('cuda')
+    )
     attn_mask = samples['attention_mask']
     samples = samples['input_ids']
 
@@ -73,8 +73,8 @@ def compute_ppl(predictions, model_id='gpt2-large'):
     nll_sum = 0
     n_tokens = 0
     for i in range(num_batches):
-        _samples = samples[i*batch_size:(i+1)*batch_size]
-        _attn_mask = attn_mask[i*batch_size:(i+1)*batch_size]
+        _samples = samples[i*batch_size:(i+1)*batch_size].cuda()
+        _attn_mask = attn_mask[i*batch_size:(i+1)*batch_size].cuda()
         logits = eval_model(_samples, attention_mask=_attn_mask)[0]
         logits = logits.transpose(-1, -2)
 
