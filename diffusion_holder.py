@@ -705,6 +705,9 @@ class DiffusionRunner:
         mask = None
 
         target = clean_x.clone()
+        if self.config.training.x_0_variance != 0:
+            clean_x += self.config.training.x_0_variance**0.5 * torch.randn_like(clean_x)
+
         if self.config.smooth_diffusion:
             clean_x = convert_to_simplex(
                 input_embeddings=clean_x.detach(),

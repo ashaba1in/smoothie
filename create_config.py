@@ -18,6 +18,7 @@ def create_config(args):
     training.ode_sampling = False
     training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
     training.checkpoint_name = ""
+    training.x_0_variance = args.x_0_variance
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.

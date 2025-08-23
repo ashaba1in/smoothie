@@ -255,6 +255,9 @@ def parse():
     parser.add_argument(
         "--clamp", action='store_true', help='If set, use clamping at generation'
     )
+    parser.add_argument(
+        "--x_0_variance", type=float, default=0.0, help='Variance of the noise added to x_0 during training'
+    )
     parser.add_argument('--condition_type', type=str, default='cross-attention', choices=[
             "cross-attention", "concatenation",
         ], help='The type of conditioning for diffusion model')
