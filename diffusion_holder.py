@@ -300,17 +300,18 @@ class DiffusionRunner:
         self.grad_scaler = GradScaler()
 
     def collate_fn(self, batch):
-        texts_trg = [t["text_trg"] for t in batch]
-        tok_trg = self.tokenizer(
-            texts_trg,
-            add_special_tokens=self.config.data.add_special_tokens,
-            padding='max_length',
-            truncation=True,
-            max_length=self.config.data.max_sequence_len,
-            return_tensors="pt",
-            return_attention_mask=True,
-            return_token_type_ids=False,
-        )
+        tok_trg = {'input_ids': torch.tensor(batch['input_ids'])}
+        # texts_trg = [t["text_trg"] for t in batch]
+        # tok_trg = self.tokenizer(
+        #     texts_trg,
+        #     add_special_tokens=self.config.data.add_special_tokens,
+        #     padding='max_length',
+        #     truncation=True,
+        #     max_length=self.config.data.max_sequence_len,
+        #     return_tensors="pt",
+        #     return_attention_mask=True,
+        #     return_token_type_ids=False,
+        # )
 
         if self.config.is_conditional:
             texts_src = [t["text_src"] for t in batch]
@@ -329,7 +330,7 @@ class DiffusionRunner:
                 "text_src": texts_src,
                 "input_ids_src": tok_src["input_ids"],
                 "attention_mask_src": tok_src["attention_mask"],
-                "text_trg": texts_trg,
+                # "text_trg": texts_trg,
                 "input_ids_trg": tok_trg["input_ids"],
                 "attention_mask_trg": tok_trg["attention_mask"],
             }
@@ -339,9 +340,9 @@ class DiffusionRunner:
             new_batch = BatchEncoding(new_batch)
         else:
             new_batch = BatchEncoding({
-                "text_trg": texts_trg,
+                # "text_trg": texts_trg,
                 "input_ids_trg": tok_trg["input_ids"],
-                "attention_mask_trg": tok_trg["attention_mask"],
+                # "attention_mask_trg": tok_trg["attention_mask"],
             })
         return new_batch
 
@@ -835,7 +836,7 @@ class DiffusionRunner:
                 src_x = None
 
             gen_text = self.generate_text_batch(
-                batch_size=len(batch["text_trg"]),
+                batch_size=len(batch["input_ids_trg"]),
                 cond_x=src_x,
                 attention_mask=None,
                 cond_mask=batch.get("attention_mask_src")
