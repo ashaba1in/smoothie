@@ -1,8 +1,50 @@
 import json
+from functools import partial
+
+from transformers import AutoTokenizer
+import torch
+import itertools
 
 from datasets import load_dataset, Dataset, DatasetDict, concatenate_datasets
 import argparse
 import os
+
+
+def tokenize(texts, tokenizer, do_group_texts=False, max_seq_len=None):
+    if do_group_texts:
+        tokens = tokenizer(
+            texts,
+            add_special_tokens=False,
+            return_attention_mask=False,
+            return_token_type_ids=False
+        )
+    else:
+        tokens = tokenizer(
+            texts,
+            add_special_tokens=False,
+            return_attention_mask=False,
+            return_token_type_ids=False,
+            padding='max_length',
+            truncation=True,
+            max_length=max_seq_len,
+        )
+    return tokens
+
+def group_texts(examples, max_seq_len, sep_token):
+    # Concatenate all texts.
+    input_ids = examples['input_ids']
+    for i in range(len(input_ids)):
+        input_ids[i].append(sep_token)
+
+    concatenated_examples = [sep_token] + list(itertools.chain(*input_ids))
+    concatenated_examples = torch.tensor(concatenated_examples)
+    reminder = len(concatenated_examples) % max_seq_len
+    if reminder > 0:
+        concatenated_examples = concatenated_examples[:-reminder]
+
+    grouped_input_ids = concatenated_examples.view(-1, max_seq_len)
+
+    return {'input_ids': grouped_input_ids}
 
 
 def download_qqp(dataset_path):
@@ -30,7 +72,7 @@ def download_xsum(dataset_path):
     dt.save_to_disk(dataset_path)
 
 
-def download_rocstory(dataset_path):
+def download_rocstory():
     def preprocess(batch):
         targets = []
         size = len(batch["storyid"])
@@ -48,27 +90,32 @@ def download_rocstory(dataset_path):
         desc="Loading...",
         remove_columns=dt.column_names,
     )
-    dt = dt.train_test_split(test_size=5000, seed=0)
-    dt.save_to_disk(dataset_path)
+    dataset = dt.train_test_split(test_size=5000, seed=0)
+
+    return dataset
 
 
-def download_openwebtext(dataset_path):
+def download_openwebtext():
     train_dt = load_dataset('openwebtext', split='train[:-100000]', cache_dir='~/.cache/huggingface/datasets/')
-    tes_dt = load_dataset('openwebtext', split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/')
+    test_dt = load_dataset('openwebtext', split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/')
 
-    dataset = DatasetDict({'train': train_dt, 'test': tes_dt})
-    dataset.save_to_disk(dataset_path)
+    dataset = DatasetDict({'train': train_dt, 'test': test_dt})
 
-def download_wikipedia(dataset_path):
+    return dataset
+
+
+def download_wikipedia():
     train_dt = load_dataset(
         "wikimedia/wikipedia", "20231101.en", split='train[:-100000]', cache_dir='~/.cache/huggingface/datasets/'
     )
-    tes_dt = load_dataset(
+    test_dt = load_dataset(
         "wikimedia/wikipedia", "20231101.en", split='train[-100000:]', cache_dir='~/.cache/huggingface/datasets/'
     )
 
-    dataset = DatasetDict({'train': train_dt, 'test': tes_dt})
-    dataset.save_to_disk(dataset_path)
+    dataset = DatasetDict({'train': train_dt, 'test': test_dt})
+
+    return dataset
+
 
 def process_diffuseq_dataset(dataset_path):
     splits = ['train', 'valid', 'test']
@@ -106,19 +153,47 @@ if __name__ == "__main__":
         "--dataset_path", type=str, default=''.join([os.getcwd(), '/datasets/']),
         required=False,
     )
+    parser.add_argument(
+        "--tokenizer_name", type=str, default='bert-base-cased',
+    )
+    parser.add_argument(
+        "--max_seq_len", type=str, required=True, help='Max sequence length in tokens'
+    )
+    parser.add_argument(
+        "--group_texts", action='store_true', help='Concatenate all texts in a one long string'
+    )
+
 
     args = parser.parse_args()
 
-    if not os.path.isfile(args.dataset_path + args.dataset_name):
-        if args.dataset_name == "rocstories":
-            download_rocstory(args.dataset_path + args.dataset_name)
-        if args.dataset_name == "openwebtext":
-            download_openwebtext(args.dataset_path + args.dataset_name)
-        if args.dataset_name == "wikipedia":
-            download_wikipedia(args.dataset_path + args.dataset_name)
-        elif args.dataset_name == "qqp":
-            download_qqp(args.dataset_path + args.dataset_name)
-        elif args.dataset_name == "xsum":
-            download_xsum(args.dataset_path + args.dataset_name)
-        elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
-            process_diffuseq_dataset(args.dataset_path + args.dataset_name)
+    save_path = args.dataset_path + args.dataset_name
+    if args.dataset_name == "rocstories":
+        dataset = download_rocstory()
+    elif args.dataset_name == "openwebtext":
+        dataset = download_openwebtext()
+    elif args.dataset_name == "wikipedia":
+        dataset = download_wikipedia()
+    elif args.dataset_name == "qqp":
+        download_qqp(save_path)
+    elif args.dataset_name == "xsum":
+        download_xsum(save_path)
+    elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
+        process_diffuseq_dataset(save_path)
+
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-cased')
+    if args.dataset_name in ['rocstories', 'openwebtext', 'wikipedia']:
+        tokenized_dataset = dataset.map(
+            partial(tokenize, tokenizer=tokenizer, do_group_texts=args.group_texts, max_seq_len=args.max_seq_len),
+            batched=True,
+            desc='Tokenizing'
+        )
+        if args.group_texts:
+            sep_token = tokenizer.sep_token_id if tokenizer.sep_token_id is not None else tokenizer.eos_token_id
+            tokenized_dataset = tokenized_dataset.map(
+                partial(args.group_texts, max_seq_len=args.max_seq_len, sep_token=sep_token),
+                batched=True,
+                desc='Grouping'
+            )
+
+        suffix = '_grouped' if args.group_texts else ''
+        tokenized_dataset.save_to_disk(save_path + suffix)

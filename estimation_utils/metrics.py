@@ -41,6 +41,7 @@ def filter_empty_texts(predictions, references):
     return pred_list, ref_list
 
 
+@torch.no_grad()
 def compute_ppl(predictions, model_id='gpt2-large'):
     torch.cuda.empty_cache()
 
@@ -83,19 +84,8 @@ def compute_ppl(predictions, model_id='gpt2-large'):
         nll_sum += nlls[_attn_mask[..., :-1].bool()].sum()
         n_tokens += _attn_mask[..., :-1].sum()
 
-    ppl = torch.exp(nll_sum / n_tokens)
+    ppl = torch.exp(nll_sum / n_tokens).item()
 
-    # perplexity = load("perplexity", module_type="metric", model_id=model_id)
-    # ppl_list = perplexity.compute(
-    #     predictions=predictions,
-    #     model_id=model_id,
-    #     device='cuda',
-    #     add_start_token=True,
-    # )["perplexities"]
-    # ppl_list = np.sort(ppl_list)
-    # quantile = 0.05
-    # a_min, a_max = int(quantile * len(ppl_list)), int((1 - quantile) * len(ppl_list))
-    # ppl = np.mean(ppl_list[a_min: a_max])
     return ppl
 
 

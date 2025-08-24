@@ -116,7 +116,15 @@ class DiffusionRunner:
                 api_token=self.config.neptune_api_token,
                 name=self.config.training.checkpoints_prefix
             )
-            self.neptune_run["parameters"] = dict(self.config)
+
+            def to_dict(config):
+                if isinstance(config, ConfigDict):
+                    config = dict(config)
+                    for k, v in config.items():
+                        config[k] = to_dict(v)
+                return config
+
+            self.neptune_run["parameters"] = to_dict(self.config)
 
         if eval:
             self.restore_parameters(self.device)
