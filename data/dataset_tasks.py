@@ -41,6 +41,9 @@ class DownstreamTaskDatasetDDP:
 
     def load_data(self):
         path = f"{self.base_path}/{self.split}"
+        if self.config.data.group_texts:
+            path = f"{self.base_path}_grouped/{self.split}"
+
         dt = load_from_disk(path)
         if self.config.is_conditional and self.split == 'test':
             dt = dt.select(range(5000))

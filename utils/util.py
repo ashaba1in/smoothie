@@ -219,6 +219,9 @@ def parse():
         "--add_special_tokens", action='store_true', help='If set, add special tokens during tokenization'
     )
     parser.add_argument(
+        "--group_texts", action='store_true', help='Concatenate all texts in a one long string'
+    )
+    parser.add_argument(
         "--encoder_name", type=str, default='bert-base-cased',
         choices=[
             "bert-base-cased",

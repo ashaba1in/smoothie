@@ -69,6 +69,7 @@ def create_config(args):
     data.swap_cfg_coef = args.swap_cfg_coef
     data.enc_gen_mean = f"{data.base_path}/{data.datasets.datasets_list[0]}/statistics/encodings-{model.encoder_name_hash}-mean.pt"
     data.enc_gen_std = f"{data.base_path}/{data.datasets.datasets_list[0]}/statistics/encodings-{model.encoder_name_hash}-std.pt"
+    data.group_texts = args.group_texts
 
     config.finetuning = False
     config.seed = 0
