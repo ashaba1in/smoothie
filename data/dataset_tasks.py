@@ -50,7 +50,7 @@ class DownstreamTaskDatasetDDP:
 
         self.dt = self.split_data_across_gpu(dt)
 
-        if self.dataset_name not in ['openwebtext', 'wikipedia', 'rocstories']:
+        if self.dataset_name in ['openwebtext', 'wikipedia', 'rocstories']:
             if 'text' in self.dt.column_names:
                 self.dt = self.dt.rename_column('text', 'text_trg')
         else:
