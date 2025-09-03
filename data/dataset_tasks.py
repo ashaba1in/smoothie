@@ -48,13 +48,10 @@ class DownstreamTaskDatasetDDP:
         if self.config.is_conditional and self.split == 'test':
             dt = dt.select(range(5000))
 
-        dt = self.split_data_across_gpu(dt)
+        self.dt = self.split_data_across_gpu(dt)
 
-        if self.dataset_name in ['openwebtext', 'wikipedia', 'rocstories']:
-            # self.dt = dt.rename_column('text', 'text_trg')
-            pass
-        else:
-            self.dt = dt.map(
+        if self.dataset_name not in ['openwebtext', 'wikipedia', 'rocstories']:
+            self.dt = self.dt.map(
                 partial(
                     batch_preprocessing, split=self.split,
                     dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
