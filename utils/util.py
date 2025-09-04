@@ -221,6 +221,9 @@ def parse():
     parser.add_argument(
         "--group_texts", action='store_true', help='Concatenate all texts in a one long string'
     )
+    parser.add_argument('--max_sequence_len', type=int, default=None)
+    parser.add_argument('--max_context_len', type=int, default=None)
+
     parser.add_argument(
         "--encoder_name", type=str, default='bert-base-cased',
         choices=[
