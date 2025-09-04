@@ -225,9 +225,6 @@ def parse():
         "--encoder_name", type=str, default='bert-base-cased',
         choices=[
             "bert-base-cased",
-            "t5-base",
-            "roberta-base",
-            "bart-base",
             "bert-large-cased"
         ])
     parser.add_argument('--model_type', type=str, default='llama', help='Type of diffusion model architecture')
