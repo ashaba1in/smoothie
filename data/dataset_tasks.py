@@ -60,10 +60,11 @@ class DownstreamTaskDatasetDDP:
                     dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
                 ),
                 batched=True,
-                load_from_cache_file=False,
+                load_from_cache_file=True,
                 num_proc=30,
                 desc="Dataset preprocessing",
                 batch_size=1000,
+                keep_in_memory=True
             )
         return self.dt
     
