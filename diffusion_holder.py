@@ -749,18 +749,19 @@ class DiffusionRunner:
             else:
                 model_input = x_t
 
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
-                with torch.no_grad():
-                    model_output = self.ddp_score_estimator(
-                        x_t=model_input, time_t=t, cond=cond_x,
-                        attention_mask=mask,
-                        cond_mask=batch.get("attention_mask_src"),
-                        x_0_self_cond=x_0_self_cond
-                    ).detach()
-                    if self.config.predict_tokens:
-                        x_0_self_cond = self.encoder(
-                            input_ids=model_output.argmax(-1),
-                        )
+            with torch.autocast(device_type='cuda', dtype=torch.float16), torch.no_grad():
+                model_output = self.ddp_score_estimator(
+                    x_t=model_input, time_t=t, cond=cond_x,
+                    attention_mask=mask,
+                    cond_mask=batch.get("attention_mask_src"),
+                    x_0_self_cond=x_0_self_cond
+                ).detach()
+                if self.config.predict_tokens:
+                    x_0_self_cond = self.encoder(
+                        input_ids=model_output.argmax(-1),
+                    )
+                else:
+                    x_0_self_cond = model_output
 
         if self.config.smooth_diffusion or self.config.tess_diffusion:
             with torch.no_grad():
