@@ -94,9 +94,8 @@ class SimilarityEvaluator:
         model_path="/home/alsh689h/workspaces/horse/alsh689h-base/smoothie/sim.pt",
         tokenizer_path="/home/alsh689h/workspaces/horse/alsh689h-base/smoothie/sim.sp.30k.model",
     ):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.model_path = f"{dir_path}/{model_path}"
-        self.tokenizer_path = f"{dir_path}/{tokenizer_path}"
+        self.model_path = model_path
+        self.tokenizer_path = tokenizer_path
         self.tok = TreebankWordTokenizer()
         model = torch.load(self.model_path, weights_only=False)
         state_dict = model["state_dict"]
