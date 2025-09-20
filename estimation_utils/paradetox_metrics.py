@@ -17,6 +17,8 @@ def compute_bleu_paradetox(predictions, references):
         if len(references[i]) > 3 and len(predictions[i]) > 3:
             bleu_sim += sentence_bleu([references[i]], predictions[i])
             counter += 1
+    if counter == 0:
+        return 0
     return float(bleu_sim / counter)
 
 
