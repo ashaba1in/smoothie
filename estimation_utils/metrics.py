@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import spacy
 import numpy as np
 import torch.nn.functional as F
-from paradetox_metrics import compute_bleu_paradetox, compute_j_score
+from .paradetox_metrics import compute_bleu_paradetox, compute_j_score
 
 
 def compute_metric(metric_name, predictions, references, sources=None, **kwargs):

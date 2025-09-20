@@ -89,14 +89,13 @@ def content_preservation(sources, predictions):
 class SimilarityEvaluator:
     def __init__(
         self,
-        model_path="./sim.pt",
-        tokenizer_path="./sim.sp.30k.model",
+        model_path="/home/alsh689h/workspaces/horse/alsh689h-base/smoothie/sim.pt",
+        tokenizer_path="/home/alsh689h/workspaces/horse/alsh689h-base/smoothie/sim.sp.30k.model",
     ):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         self.model_path = f"{dir_path}/{model_path}"
         self.tokenizer_path = f"{dir_path}/{tokenizer_path}"
         self.tok = TreebankWordTokenizer()
-        # torch.serialization.add_safe_globals([Namespace])
         model = torch.load(self.model_path, weights_only=False)
         state_dict = model["state_dict"]
         vocab_words = model["vocab_words"]
@@ -203,7 +202,7 @@ class ParaModel(nn.Module):
 
 class WordAveraging(ParaModel):
     def __init__(self, args, vocab):
-        super(WordAveraging, self).__init__(args, vocab)
+        super().__init__(args, vocab)
 
         self.vocab = vocab
         self.embedding = nn.Embedding(len(self.vocab), self.args.dim)
