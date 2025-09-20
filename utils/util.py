@@ -186,6 +186,9 @@ def convert_to_tess_simplex(token_ids, simplex_value, vocab_size):
 def parse():
     parser = argparse.ArgumentParser(description="Dataset arguments")
     parser.add_argument(
+        "--charisma", action='store_true', help='If set, computation is happening on charisma cluster'
+    )
+    parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
             "rocstories", "paradetox", "qqp", "xsum", "newsela_auto", "quasar_t", "openwebtext", "wikipedia"

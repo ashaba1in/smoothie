@@ -173,7 +173,7 @@ if __name__ == "__main__":
         "--tokenizer_name", type=str, default='bert-base-cased',
     )
     parser.add_argument(
-        "--max_seq_len", type=str, required=True, help='Max sequence length in tokens'
+        "--max_seq_len", type=int, required=False, help='Max sequence length in tokens'
     )
     parser.add_argument(
         "--group_texts", action='store_true', help='Concatenate all texts in a one long string'
