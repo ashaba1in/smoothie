@@ -7,7 +7,10 @@ import torch
 def create_config(args):
     config = ml_collections.ConfigDict()
 
-    config.work_dir = os.getcwd()
+    if args.charisma:
+        config.work_dir = os.getcwd()
+    else:
+        config.work_dir = "/data/horse/ws/alsh689h-base/smoothie"
 
     training = config.training = ml_collections.ConfigDict()
     training.accum_batch_steps = 1
@@ -111,7 +114,9 @@ def create_config(args):
     config.se_config.use_self_cond = config.use_self_cond
     config.se_config.self_cond_type = args.self_cond_type
     config.se_config.predict_tokens = config.predict_tokens
-    if 'A100' in torch.cuda.get_device_name(0) or 'V100' in torch.cuda.get_device_name(0):
+
+    device_name = torch.cuda.get_device_name(0)
+    if 'H100' in device_name or 'A100' in device_name or 'V100' in device_name:
         config.se_config._attn_implementation = 'sdpa'
     else:
         config.se_config._attn_implementation = 'eager'
@@ -159,7 +164,7 @@ def create_se_config(encoder_name):
 
 def create_datasets_config(args):
     config = ml_collections.ConfigDict()
-    config.downstream_tasks = ["qqp", "xsum", "newsela_auto", "quasar_t"]
+    config.downstream_tasks = ["paradetox", "qqp", "xsum", "newsela_auto", "quasar_t"]
     if args.dataset_name is None:
         config.datasets_list = ["rocstories"]
     else:
@@ -170,6 +175,10 @@ def create_datasets_config(args):
         "wikipedia": {"metrics": ["mauve", "div", "ppl"],
                       "tracked_metric": "mauve"},
         "openwebtext": {"metrics": ["div", "ppl"], "tracked_metric": "ppl"},
+        "paradetox": {
+            "metrics": ["bleu_paradetox", "j_score", "ppl"],
+            "tracked_metric": "j_score",
+        },
         "qqp": {
             "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
             "tracked_metric": "bert-score",
@@ -221,6 +230,7 @@ def get_sequence_len(dataset_name):
         "wikipedia": 256,
         "rocstories": 80,
         "openwebtext": 1024,
+        "paradetox": 40,
         "qqp": 50,
         "xsum": 64,
         "wiki_auto": 100,
@@ -235,6 +245,7 @@ def get_context_len(dataset_name):
         "wikipedia": 256,
         "rocstories": 80,
         "openwebtext": 1024,
+        "paradetox": 40,
         "qqp": 50,
         "xsum": 512,
         "wiki_auto": 100,

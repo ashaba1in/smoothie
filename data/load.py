@@ -72,6 +72,22 @@ def download_xsum(dataset_path):
     dt.save_to_disk(dataset_path)
 
 
+def download_paradetox(dataset_path):
+    dt = load_dataset("s-nlp/paradetox")["train"]
+    dt = dt.train_test_split(test_size=0.2, seed=0)
+    dt_train = dt["train"]
+    dt = dt["test"].train_test_split(test_size=0.5, seed=0)
+
+    dt = DatasetDict(
+        {
+            "train": dt_train,
+            "validation": dt["train"],
+            "test": dt["test"],
+        }
+    )
+    dt.save_to_disk(dataset_path)
+
+
 def download_rocstory():
     def preprocess(batch):
         targets = []
@@ -145,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext", 'wikipedia'
+            "rocstories", "paradetox", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext", 'wikipedia'
         ],
         required=True,
     )
@@ -173,6 +189,8 @@ if __name__ == "__main__":
         dataset = download_openwebtext()
     elif args.dataset_name == "wikipedia":
         dataset = download_wikipedia()
+    elif args.dataset_name == "paradetox":
+        download_paradetox(save_path)
     elif args.dataset_name == "qqp":
         download_qqp(save_path)
     elif args.dataset_name == "xsum":

@@ -2,7 +2,12 @@ import numpy as np
 
 
 def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
-    if dataset_name == "qqp":
+    if dataset_name == "paradetox":
+        new_batch = {
+            "text_src": batch["en_toxic_comment"],
+            "text_trg": batch["en_neutral_comment"],
+        }
+    elif dataset_name == "qqp":
         if split == "train":
             p_swap = 0.5
         else:

@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import spacy
 import numpy as np
 import torch.nn.functional as F
+from paradetox_metrics import compute_bleu_paradetox, compute_j_score
 
 
 def compute_metric(metric_name, predictions, references, sources=None, **kwargs):
@@ -27,6 +28,10 @@ def compute_metric(metric_name, predictions, references, sources=None, **kwargs)
         return compute_sari(sources=sources, predictions=predictions, references=[[x] for x in references])
     elif metric_name == "ppl":
         return compute_ppl(predictions=predictions)
+    elif metric_name == "j_score":
+        return compute_j_score(predictions=predictions, sources=sources)
+    elif metric_name == "bleu_paradetox":
+        return compute_bleu_paradetox(predictions=predictions, references=references)
     else:
         raise Exception(f"Unknown metric: {metric_name}")
 
