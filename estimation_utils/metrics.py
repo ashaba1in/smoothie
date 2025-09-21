@@ -29,7 +29,7 @@ def compute_metric(metric_name, predictions, references, sources=None, **kwargs)
     elif metric_name == "ppl":
         return compute_ppl(predictions=predictions)
     elif metric_name == "j_score":
-        return compute_j_score(predictions=predictions, sources=sources)
+        return compute_j_score(predictions=predictions, sources=sources)["j-score"]
     elif metric_name == "bleu_paradetox":
         return compute_bleu_paradetox(predictions=predictions, references=references)
     else:
