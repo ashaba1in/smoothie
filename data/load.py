@@ -178,7 +178,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--group_texts", action='store_true', help='Concatenate all texts in a one long string'
     )
-
+    parser.add_argument(
+        "--tokenize", action='store_true', help='Concatenate all texts in a one long string'
+    )
 
     args = parser.parse_args()
 
@@ -200,21 +202,24 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
     if args.dataset_name in ['rocstories', 'openwebtext', 'wikipedia']:
-        tokenized_dataset = dataset.map(
-            partial(tokenize, tokenizer=tokenizer, do_group_texts=args.group_texts, max_seq_len=args.max_seq_len),
-            batched=True,
-            num_proc=16,
-            desc='Tokenizing',
-            remove_columns=dataset.column_names
-        )
-        if args.group_texts:
-            sep_token = tokenizer.sep_token_id if tokenizer.sep_token_id is not None else tokenizer.eos_token_id
-            tokenized_dataset = tokenized_dataset.map(
-                partial(args.group_texts, max_seq_len=args.max_seq_len, sep_token=sep_token),
+        if args.tokenize:
+            tokenized_dataset = dataset.map(
+                partial(tokenize, tokenizer=tokenizer, do_group_texts=args.group_texts, max_seq_len=args.max_seq_len),
                 batched=True,
                 num_proc=16,
-                desc='Grouping'
+                desc='Tokenizing',
+                remove_columns=dataset.column_names
             )
+            if args.group_texts:
+                sep_token = tokenizer.sep_token_id if tokenizer.sep_token_id is not None else tokenizer.eos_token_id
+                tokenized_dataset = tokenized_dataset.map(
+                    partial(args.group_texts, max_seq_len=args.max_seq_len, sep_token=sep_token),
+                    batched=True,
+                    num_proc=16,
+                    desc='Grouping'
+                )
 
-        suffix = '_grouped' if args.group_texts else ''
-        tokenized_dataset.save_to_disk(save_path + suffix)
+            suffix = '_grouped' if args.group_texts else ''
+            tokenized_dataset.save_to_disk(save_path + suffix)
+        else:
+            dataset.save_to_disk(save_path)

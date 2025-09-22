@@ -45,6 +45,8 @@ class DownstreamTaskDatasetDDP:
             path = f"{self.base_path}_grouped/{self.split}"
 
         dt = load_from_disk(path)
+        if self.dataset_name == 'openwebtext' and self.split == 'test':
+            dt = dt.select(range(5000))
 
         self.dt = self.split_data_across_gpu(dt)
 
