@@ -48,6 +48,8 @@ class DiffusionRunner:
         # Diffusion Encoder
         encoder_name = config.model.encoder_name
         self.tokenizer = AutoTokenizer.from_pretrained(encoder_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.encoder = Encoder(
             encoder_name,
             emb_statistics_agg_type=config.emb_statistics_agg_type,

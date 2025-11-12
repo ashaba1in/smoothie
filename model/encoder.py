@@ -9,13 +9,18 @@ class Encoder(torch.nn.Module):
         model = AutoModel.from_pretrained(self.encoder_name)
         if encoder_name == 'bert-base-cased':
             self.embeddings = model.embeddings.word_embeddings.weight.cpu()
-        if encoder_name == 'gpt2':
+        elif encoder_name == 'gpt2':
+            # padding token
+            model.resize_token_embeddings(model.wte.num_embeddings + 1)
+            model.wte.weight.data[-1] = 0
             self.embeddings = model.wte.weight.cpu()
-        if encoder_name == 't5-base':
+        elif encoder_name == 'google-t5/t5-base':
             if t5_encoder:
                 self.embeddings = model.encoder.embed_tokens.weight.cpu()
             else:
                 self.embeddings = model.decoder.embed_tokens.weight.cpu()
+        else:
+            raise NotImplementedError(f"Tokenizer {encoder_name} is not supported")
 
         used_ids, unused_ids = self.get_used_ids(encoder_name=encoder_name)
         if emb_statistics_agg_type == 'features':

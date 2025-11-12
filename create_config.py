@@ -61,11 +61,11 @@ def create_config(args):
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
     model.conditional_encoder_name_hash = model.conditional_encoder_name.replace("/", "-")
-    model.t5_encoder = True
+    model.t5_encoder = args.t5_encoder
 
     data = config.data = ml_collections.ConfigDict()
     data.datasets = create_datasets_config(args)
-    data.base_path = os.path.join(config.work_dir, "/datasets")
+    data.base_path = os.path.join(config.work_dir, "datasets")
     if args.max_sequence_len is None:
         data.max_sequence_len = get_sequence_len(data.datasets.datasets_list[0])
     else:
@@ -109,7 +109,7 @@ def create_config(args):
     decoder.condition_encoder = args.decoder_condition_encoder
     decoder.decoder_path = f"{data.base_path}/{data.datasets.datasets_list[0]}/{decoder.name}.pth"
 
-    config.se_config = create_se_config(model.encoder_name)
+    config.se_config = create_se_config('bert-base-cased')
     config.se_config.is_conditional = config.is_conditional
     config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_name).vocab_size
     config.se_config.use_self_cond = config.use_self_cond
