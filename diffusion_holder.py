@@ -51,6 +51,7 @@ class DiffusionRunner:
         self.encoder = Encoder(
             encoder_name,
             emb_statistics_agg_type=config.emb_statistics_agg_type,
+            t5_encoder=config.model.t5_encoder
         ).eval().cuda()
 
         # Score estimator
@@ -579,7 +580,7 @@ class DiffusionRunner:
                 id_probs_t = probs_t.gather(2, batch["input_ids_trg"].unsqueeze(-1))
                 mean_id_probs_t.append(id_probs_t.mean().item())
 
-        dir_path = f'plots/{self.config.training.checkpoints_prefix}'
+        dir_path = os.path.join(self.config.work_dir, f'plots/{self.config.training.checkpoints_prefix}')
         os.makedirs(dir_path, exist_ok=True)
         fig = plt.figure(figsize=(12, 4))
 

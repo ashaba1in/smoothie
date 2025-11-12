@@ -19,7 +19,7 @@ def create_config(args):
     training.eval_freq = 25_000 * training.accum_batch_steps
     training.batch_size = args.batch_size // training.accum_batch_steps
     training.ode_sampling = False
-    training.checkpoints_folder = f"{config.work_dir}/checkpoints/"
+    training.checkpoints_folder = os.path.join(config.work_dir, "checkpoints")
     training.checkpoint_name = ""
     training.x_0_variance = args.x_0_variance
 
@@ -37,7 +37,7 @@ def create_config(args):
     validation = config.validation = ml_collections.ConfigDict()
     validation.batch_size = training.batch_size
     validation.num_gen_texts = args.num_gen_texts
-    validation.texts_path = f"{config.work_dir}/generated_texts"
+    validation.texts_path = os.path.join(config.work_dir, "generated_texts")
     validation.cfg_coef = 0.
 
     dynamic = config.dynamic = ml_collections.ConfigDict()
@@ -61,10 +61,11 @@ def create_config(args):
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
     model.conditional_encoder_name_hash = model.conditional_encoder_name.replace("/", "-")
+    model.t5_encoder = True
 
     data = config.data = ml_collections.ConfigDict()
     data.datasets = create_datasets_config(args)
-    data.base_path = f"{config.work_dir}/datasets"
+    data.base_path = os.path.join(config.work_dir, "/datasets")
     if args.max_sequence_len is None:
         data.max_sequence_len = get_sequence_len(data.datasets.datasets_list[0])
     else:
@@ -174,7 +175,10 @@ def create_datasets_config(args):
                        "tracked_metric": "mauve"},
         "wikipedia": {"metrics": ["mauve", "div", "ppl"],
                       "tracked_metric": "mauve"},
-        "openwebtext": {"metrics": ["div", "ppl"], "tracked_metric": "ppl"},
+        "openwebtext": {
+            "metrics": ["div", "ppl", "mauve"],
+            "tracked_metric": "mauve"
+        },
         "paradetox": {
             "metrics": ["bleu_paradetox", "j_score", "ppl"],
             "tracked_metric": "j_score",

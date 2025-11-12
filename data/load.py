@@ -200,9 +200,9 @@ if __name__ == "__main__":
     elif args.dataset_name == "quasar_t" or args.dataset_name == "newsela_auto":
         process_diffuseq_dataset(save_path)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
     if args.dataset_name in ['rocstories', 'openwebtext', 'wikipedia']:
         if args.tokenize:
+            tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
             tokenized_dataset = dataset.map(
                 partial(tokenize, tokenizer=tokenizer, do_group_texts=args.group_texts, max_seq_len=args.max_seq_len),
                 batched=True,

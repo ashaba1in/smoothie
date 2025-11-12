@@ -3,10 +3,19 @@ from transformers import AutoModel, AutoTokenizer
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, encoder_name='bert-base-cased', emb_statistics_agg_type='features'):
+    def __init__(self, encoder_name='bert-base-cased', emb_statistics_agg_type='features', t5_encoder=True):
         super().__init__()
         self.encoder_name = encoder_name
-        self.embeddings = AutoModel.from_pretrained(self.encoder_name).embeddings.word_embeddings.weight.cpu()
+        model = AutoModel.from_pretrained(self.encoder_name)
+        if encoder_name == 'bert-base-cased':
+            self.embeddings = model.embeddings.word_embeddings.weight.cpu()
+        if encoder_name == 'gpt2':
+            self.embeddings = model.wte.weight.cpu()
+        if encoder_name == 't5-base':
+            if t5_encoder:
+                self.embeddings = model.encoder.embed_tokens.weight.cpu()
+            else:
+                self.embeddings = model.decoder.embed_tokens.weight.cpu()
 
         used_ids, unused_ids = self.get_used_ids(encoder_name=encoder_name)
         if emb_statistics_agg_type == 'features':
