@@ -161,7 +161,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "paradetox", "qqp", "xsum", "quasar_t", "newsela_auto", "openwebtext", 'wikipedia'
+            "rocstories", "paradetox", "qqp", "xsum", "quasar_t",
+            "newsela_auto", "openwebtext", 'wikipedia', "iwslt14", "wmt14"
         ],
         required=True,
     )

@@ -50,6 +50,7 @@ class DiffusionRunner:
         self.tokenizer = AutoTokenizer.from_pretrained(encoder_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            self.config.se_config.vocab_size = len(self.tokenizer)
         self.encoder = Encoder(
             encoder_name,
             emb_statistics_agg_type=config.emb_statistics_agg_type,
@@ -57,8 +58,8 @@ class DiffusionRunner:
         ).eval().cuda()
 
         # Score estimator
-        self.se_config = deepcopy(config.se_config)
-        self.se_config.use_self_cond = config.use_self_cond
+        self.se_config = deepcopy(self.config.se_config)
+        self.se_config.use_self_cond = self.config.use_self_cond
         self.score_estimator = ScoreEstimatorEMB(
             config=self.se_config
         ).cuda()

@@ -65,6 +65,8 @@ def create_config(args):
 
     data = config.data = ml_collections.ConfigDict()
     data.datasets = create_datasets_config(args)
+    data.src_lang = args.src_lang
+    data.trg_lang = args.trg_lang
     data.base_path = os.path.join(config.work_dir, "datasets")
     if args.max_sequence_len is None:
         data.max_sequence_len = get_sequence_len(data.datasets.datasets_list[0])
@@ -165,7 +167,7 @@ def create_se_config(encoder_name):
 
 def create_datasets_config(args):
     config = ml_collections.ConfigDict()
-    config.downstream_tasks = ["paradetox", "qqp", "xsum", "newsela_auto", "quasar_t"]
+    config.downstream_tasks = ["paradetox", "qqp", "xsum", "newsela_auto", "quasar_t", "iwslt14", "wmt14"]
     if args.dataset_name is None:
         config.datasets_list = ["rocstories"]
     else:
@@ -202,6 +204,14 @@ def create_datasets_config(args):
         "quasar_t": {
             "metrics": ["bleu", "bert-score", "rougeL", "div1", "div4"],
             "tracked_metric": "bert-score",
+        },
+        "iwslt14": {
+            "metrics": ["bleu"],
+            "tracked_metric": "bleu",
+        },
+        "wmt14": {
+            "metrics": ["bleu"],
+            "tracked_metric": "bleu",
         },
     }
     return config
@@ -240,6 +250,8 @@ def get_sequence_len(dataset_name):
         "wiki_auto": 100,
         "newsela_auto": 64,
         "quasar_t": 50,
+        "iwslt14": 100,
+        "wmt14": 80
     }
     return data[dataset_name]
 
@@ -255,5 +267,7 @@ def get_context_len(dataset_name):
         "wiki_auto": 100,
         "newsela_auto": 64,
         "quasar_t": 100,
+        "iwslt14": 100,
+        "wmt14": 80
     }
     return data[dataset_name]

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
+def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef, src_lang=None, trg_lang=None):
     if dataset_name == "paradetox":
         new_batch = {
             "text_src": batch["en_toxic_comment"],
@@ -42,6 +42,11 @@ def batch_preprocessing(batch, dataset_name, split, swap_cfg_coef):
         new_batch = {
             "text_src": batch["src"],
             "text_trg": batch["trg"],
+        }
+    elif dataset_name == "iwslt14" or dataset_name == "wmt14":
+        new_batch = {
+            "text_src": batch[src_lang],
+            "text_trg": batch[trg_lang],
         }
     elif dataset_name == "rocstories":
         new_batch = {

@@ -191,9 +191,16 @@ def parse():
     parser.add_argument(
         "--dataset_name", type=str, default=None, 
         choices=[
-            "rocstories", "paradetox", "qqp", "xsum", "newsela_auto", "quasar_t", "openwebtext", "wikipedia"
+            "rocstories", "paradetox", "qqp", "xsum", "newsela_auto",
+            "quasar_t", "openwebtext", "wikipedia", "iwslt14", "wmt14"
         ],
         required=False,
+    )
+    parser.add_argument(
+        "--src_lang", type=str, default='de', help='Source language for mt datasets'
+    )
+    parser.add_argument(
+        "--trg_lang", type=str, default='en', help='Target language for mt datasets'
     )
     parser.add_argument(
         "--training_epochs", type=int, default=None, help='Number of training epochs. Used for decoder'
@@ -235,7 +242,7 @@ def parse():
             "google-t5/t5-base",
             "gpt2"
         ])
-    parser.add_argument('--t5_encoder', action='store_true', help='Wether to use t5 encoder embeddings or decoder')
+    parser.add_argument('--t5_encoder', action='store_true', help='Whether to use t5 encoder embeddings or decoder')
     parser.add_argument('--model_type', type=str, default='llama', help='Type of diffusion model architecture')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')
     parser.add_argument(

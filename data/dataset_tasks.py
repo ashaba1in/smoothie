@@ -53,11 +53,14 @@ class DownstreamTaskDatasetDDP:
         if self.dataset_name in ['openwebtext', 'wikipedia', 'rocstories']:
             if 'text' in self.dt.column_names:
                 self.dt = self.dt.rename_column('text', 'text_trg')
+            if 'target' in self.dt.column_names:
+                self.dt = self.dt.rename_column('target', 'text_trg')
         else:
             self.dt = self.dt.map(
                 partial(
                     batch_preprocessing, split=self.split,
-                    dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef
+                    dataset_name=self.dataset_name, swap_cfg_coef=self.config.data.swap_cfg_coef,
+                    src_lang=self.config.data.src_lang, trg_lang=self.config.data.trg_lang,
                 ),
                 batched=True,
                 load_from_cache_file=True,
