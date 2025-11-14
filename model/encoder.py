@@ -1,3 +1,4 @@
+import os
 import torch
 from transformers import AutoModel, AutoTokenizer
 
@@ -6,21 +7,24 @@ class Encoder(torch.nn.Module):
     def __init__(self, encoder_name='bert-base-cased', emb_statistics_agg_type='features', t5_encoder=True):
         super().__init__()
         self.encoder_name = encoder_name
-        model = AutoModel.from_pretrained(self.encoder_name)
-        if encoder_name == 'bert-base-cased':
-            self.embeddings = model.embeddings.word_embeddings.weight.cpu()
-        elif encoder_name == 'gpt2':
-            # padding token
-            model.resize_token_embeddings(model.wte.num_embeddings + 1)
-            model.wte.weight.data[-1] = 0
-            self.embeddings = model.wte.weight.cpu()
-        elif encoder_name == 'google-t5/t5-base':
-            if t5_encoder:
-                self.embeddings = model.encoder.embed_tokens.weight.cpu()
-            else:
-                self.embeddings = model.decoder.embed_tokens.weight.cpu()
+        if 'glove' in encoder_name:
+            self.embeddings = torch.load(os.path.join(encoder_name, 'embeddings.pt'))
         else:
-            raise NotImplementedError(f"Tokenizer {encoder_name} is not supported")
+            model = AutoModel.from_pretrained(self.encoder_name)
+            if encoder_name == 'bert-base-cased':
+                self.embeddings = model.embeddings.word_embeddings.weight.cpu()
+            elif encoder_name == 'gpt2':
+                # padding token
+                model.resize_token_embeddings(model.wte.num_embeddings + 1)
+                model.wte.weight.data[-1] = 0
+                self.embeddings = model.wte.weight.cpu()
+            elif encoder_name == 'google-t5/t5-base':
+                if t5_encoder:
+                    self.embeddings = model.encoder.embed_tokens.weight.cpu()
+                else:
+                    self.embeddings = model.decoder.embed_tokens.weight.cpu()
+            else:
+                raise NotImplementedError(f"Tokenizer {encoder_name} is not supported")
 
         used_ids, unused_ids = self.get_used_ids(encoder_name=encoder_name)
         if emb_statistics_agg_type == 'features':
