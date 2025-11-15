@@ -1,6 +1,6 @@
 import ml_collections
 import os
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoTokenizer
 import torch
 
 
@@ -113,7 +113,7 @@ def create_config(args):
 
     config.se_config = create_se_config('bert-base-cased')
     config.se_config.is_conditional = config.is_conditional
-    config.se_config.vocab_size = AutoConfig.from_pretrained(model.encoder_name).vocab_size
+    config.se_config.vocab_size = len(AutoTokenizer.from_pretrained(model.encoder_name))
     config.se_config.use_self_cond = config.use_self_cond
     config.se_config.self_cond_type = args.self_cond_type
     config.se_config.predict_tokens = config.predict_tokens

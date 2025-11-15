@@ -8,38 +8,39 @@ class Encoder(torch.nn.Module):
         super().__init__()
         self.encoder_name = encoder_name
         if 'glove' in encoder_name:
-            self.embeddings = torch.load(os.path.join(encoder_name, 'embeddings.pt'))
+            embeddings = torch.load(os.path.join(encoder_name, 'embeddings.pt'))
         else:
-            model = AutoModel.from_pretrained(self.encoder_name)
+            model = AutoModel.from_pretrained(encoder_name)
             if encoder_name == 'bert-base-cased':
-                self.embeddings = model.embeddings.word_embeddings.weight.cpu()
+                embeddings = model.embeddings.word_embeddings.weight.data
             elif encoder_name == 'gpt2':
                 # padding token
                 model.resize_token_embeddings(model.wte.num_embeddings + 1)
                 model.wte.weight.data[-1] = 0
-                self.embeddings = model.wte.weight.cpu()
+                embeddings = model.wte.weight.data
             elif encoder_name == 'google-t5/t5-base':
                 if t5_encoder:
-                    self.embeddings = model.encoder.embed_tokens.weight.cpu()
+                    embeddings = model.encoder.embed_tokens.weight.data
                 else:
-                    self.embeddings = model.decoder.embed_tokens.weight.cpu()
+                    embeddings = model.decoder.embed_tokens.weight.data
             else:
                 raise NotImplementedError(f"Tokenizer {encoder_name} is not supported")
 
         used_ids, unused_ids = self.get_used_ids(encoder_name=encoder_name)
         if emb_statistics_agg_type == 'features':
-            self.dim = 0
+            dim = 0
         elif emb_statistics_agg_type == 'total':
-            self.dim = (0, 1)
+            dim = (0, 1)
         else:
             raise Exception("Unknown embedding aggregation type, support only ['features', 'total']")
 
-        self.emb_mean = torch.mean(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
-        self.emb_std = torch.std(self.embeddings[used_ids, :], dim=self.dim, keepdim=True)
-        self.embeddings.data = (self.embeddings.data - self.emb_mean) / self.emb_std
-        self.embeddings.cuda()
+        emb_mean = torch.mean(embeddings[used_ids, :], dim=dim, keepdim=True)
+        emb_std = torch.std(embeddings[used_ids, :], dim=dim, keepdim=True)
+        embeddings.data = (embeddings.data - emb_mean) / emb_std
+        self.register_buffer("embeddings", embeddings)
 
     def forward(self, input_ids):
+        print(self.embeddings.device)
         return self.embeddings[input_ids]
 
     @staticmethod
