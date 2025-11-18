@@ -57,6 +57,7 @@ def create_config(args):
     model.downstream_task = ""
     model.prediction = "x_0"
     model.loss = "L_x_0"
+    model.src_encoder_name = args.src_encoder_name
     model.encoder_name = args.encoder_name
     model.conditional_encoder_name = model.encoder_name
     model.encoder_name_hash = model.encoder_name.replace("/", "-")
@@ -113,7 +114,7 @@ def create_config(args):
 
     config.se_config = create_se_config('bert-base-cased')
     config.se_config.is_conditional = config.is_conditional
-    config.se_config.vocab_size = len(AutoTokenizer.from_pretrained(model.encoder_name))
+    # config.se_config.vocab_size = len(AutoTokenizer.from_pretrained(model.encoder_name))
     config.se_config.use_self_cond = config.use_self_cond
     config.se_config.self_cond_type = args.self_cond_type
     config.se_config.predict_tokens = config.predict_tokens

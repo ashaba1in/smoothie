@@ -240,8 +240,12 @@ def parse():
             "bert-base-cased",
             "bert-large-cased",
             "google-t5/t5-base",
-            "gpt2"
+            "gpt2",
+            "datasets/rocstories/glove"
         ])
+    parser.add_argument(
+        "--src_encoder_name", type=str, default=None,
+    )
     parser.add_argument('--t5_encoder', action='store_true', help='Whether to use t5 encoder embeddings or decoder')
     parser.add_argument('--model_type', type=str, default='llama', help='Type of diffusion model architecture')
     parser.add_argument('--decoder_name', type=str, default=None, help='Name of decoder file without .pt')

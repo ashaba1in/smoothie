@@ -8,10 +8,10 @@ class Encoder(torch.nn.Module):
         super().__init__()
         self.encoder_name = encoder_name
         if 'glove' in encoder_name:
-            embeddings = torch.load(os.path.join(encoder_name, 'embeddings.pt'))
+            embeddings = torch.load(os.path.join(encoder_name, 'embeddings.pt')).to(torch.float32)
         else:
             model = AutoModel.from_pretrained(encoder_name)
-            if encoder_name == 'bert-base-cased':
+            if encoder_name == 'bert-base-cased' or encoder_name == 'bert-base-german-cased':
                 embeddings = model.embeddings.word_embeddings.weight.data
             elif encoder_name == 'gpt2':
                 # padding token

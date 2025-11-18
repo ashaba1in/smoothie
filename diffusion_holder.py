@@ -56,8 +56,22 @@ class DiffusionRunner:
             emb_statistics_agg_type=config.emb_statistics_agg_type,
             t5_encoder=config.model.t5_encoder
         ).eval().cuda()
+        if config.is_conditional:
+            if config.model.src_encoder_name is not None:
+                self.src_tokenizer = AutoTokenizer.from_pretrained(config.model.src_encoder_name)
+                self.src_encoder = Encoder(
+                    config.model.src_encoder_name,
+                    emb_statistics_agg_type=config.emb_statistics_agg_type,
+                    t5_encoder=config.model.t5_encoder
+                ).eval().cuda()
+            else:
+                self.src_tokenizer = self.tokenizer
+                self.src_encoder = self.encoder
+
+        self.config.se_config.vocab_size = len(self.encoder.embeddings)
 
         # Score estimator
+        self.config.se_config.vocab_size = len(self.encoder.embeddings)
         self.se_config = deepcopy(self.config.se_config)
         self.se_config.use_self_cond = self.config.use_self_cond
         self.score_estimator = ScoreEstimatorEMB(
@@ -323,7 +337,7 @@ class DiffusionRunner:
 
         if self.config.is_conditional:
             texts_src = [t["text_src"] for t in batch]
-            tok_src = self.tokenizer(
+            tok_src = self.src_tokenizer(
                 texts_src,
                 add_special_tokens=self.config.data.add_special_tokens,
                 padding=True,
@@ -401,11 +415,11 @@ class DiffusionRunner:
         self.grad_scaler.update()
 
         # My custom strategy
-        scale = self.grad_scaler._scale.item()
-        max_scale = 2 ** 30
-        min_scale = 4096
-        scale = np.clip(scale, min_scale, max_scale)
-        self.grad_scaler.update(new_scale=scale)
+        # scale = self.grad_scaler._scale.item()
+        # max_scale = 2 ** 30
+        # min_scale = 4096
+        # scale = np.clip(scale, min_scale, max_scale)
+        # self.grad_scaler.update(new_scale=scale)
 
         self.ema.update(self.score_estimator.parameters())
         self.scheduler.step_update(self.step)
@@ -463,7 +477,7 @@ class DiffusionRunner:
                 batch = batch.to(f"cuda:{dist.get_rank()}")
 
                 if self.config.is_conditional:
-                    src_x = self.encoder(input_ids=batch["input_ids_src"])
+                    src_x = self.src_encoder(input_ids=batch["input_ids_src"])
                 else:
                     src_x = None
 
@@ -501,7 +515,7 @@ class DiffusionRunner:
         for batch in self.valid_loader:
             batch = batch.to(f"cuda:{dist.get_rank()}")
             if self.config.is_conditional:
-                src_x = self.encoder(input_ids=batch["input_ids_src"])
+                src_x = self.src_encoder(input_ids=batch["input_ids_src"])
             else:
                 src_x = None
 
@@ -621,7 +635,7 @@ class DiffusionRunner:
         x_0_self_cond=None
     ) -> torch.Tensor:
         texts_src = ["" for _ in range(x_t.shape[0])]
-        tok_src = self.tokenizer(
+        tok_src = self.src_tokenizer(
             texts_src,
             add_special_tokens=self.config.data.add_special_tokens,
             padding=True,
@@ -631,7 +645,7 @@ class DiffusionRunner:
             return_attention_mask=True,
             return_token_type_ids=False,
         ).to(f"cuda:{dist.get_rank()}")
-        src_x = self.encoder(input_ids=tok_src["input_ids"])
+        src_x = self.src_encoder(input_ids=tok_src["input_ids"])
 
         x_0 = model(
             x_t=x_t, 
@@ -839,7 +853,7 @@ class DiffusionRunner:
             else:
                 batch = batch.to(f"cuda:0")
             if self.config.is_conditional:
-                src_x = self.encoder(input_ids=batch["input_ids_src"])
+                src_x = self.src_encoder(input_ids=batch["input_ids_src"])
             else:
                 src_x = None
 
@@ -900,7 +914,7 @@ class DiffusionRunner:
             sigma_0=self.config.dynamic.sigma_min,
             embeddings=self.encoder.embeddings,
         )
-        logits[:, :, 1:106] = -10000
+        # logits[:, :, 1:106] = -10000
         tokens = logits.argmax(-1)
         return tokens
 
