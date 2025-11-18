@@ -6,6 +6,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import spacy
 import numpy as np
 import torch.nn.functional as F
+from sacremoses import MosesDetokenizer
+from sacrebleu import corpus_bleu
 from .paradetox_metrics import compute_bleu_paradetox, compute_j_score
 
 
@@ -24,6 +26,8 @@ def compute_metric(metric_name, predictions, references, sources=None, **kwargs)
         return compute_bert_score(predictions=predictions, references=references)
     elif metric_name == "bleu":
         return compute_bleu(predictions=predictions, references=references)
+    elif metric_name == "sacrebleu":
+        return compute_sacrebleu(predictions=predictions, references=references, lang=kwargs.get('lang'))
     elif metric_name == "sari":
         return compute_sari(sources=sources, predictions=predictions, references=[[x] for x in references])
     elif metric_name == "ppl":
@@ -209,3 +213,17 @@ def compute_bleu(predictions, references, max_order=4, smooth=False):
 
     results = bleu(reference_corpus=references, translation_corpus=predictions, max_order=max_order, smooth=smooth)
     return results[0]
+
+
+def compute_sacrebleu(predictions, references, lang):
+    detokenizer = MosesDetokenizer(lang=lang).detokenize
+
+    generations = [detokenizer(t.lower().split(), return_str=True) for t in predictions]
+    references = [detokenizer(t.lower().split(), return_str=True) for t in references]
+
+    tokenize = "intl" if lang == "de" else "13a"
+
+    res = str(corpus_bleu(generations, [references], tokenize=tokenize))
+    print(res)
+    bleu = float(res.split()[2])
+    return bleu

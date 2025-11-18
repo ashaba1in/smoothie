@@ -880,15 +880,16 @@ class DiffusionRunner:
         if attention_mask is not None:
             attention_mask = attention_mask.cuda()
 
-        pred_embeddings = self.pred_embeddings(
-            batch_size=batch_size,
-            attention_mask=attention_mask,
-            cond_x=cond_x,
-            cond_mask=cond_mask,
-            eps_t=eps_t,
-            x=x
-        )
-        tokens = self.decode(pred_embeddings)
+        with torch.amp.autocast('cuda', dtype=torch.float16):
+            pred_embeddings = self.pred_embeddings(
+                batch_size=batch_size,
+                attention_mask=attention_mask,
+                cond_x=cond_x,
+                cond_mask=cond_mask,
+                eps_t=eps_t,
+                x=x
+            )
+            tokens = self.decode(pred_embeddings)
 
         end_tokens = []
         if hasattr(self.tokenizer, 'eos_token') and self.tokenizer.eos_token is not None:
@@ -1032,11 +1033,13 @@ class DiffusionRunner:
             metrics_dict[dataset_name] = dict()
 
             for metric_name in self.config.data.datasets.metrics[dataset_name]["metrics"]:
+                lang = self.config.data.trg_lang
                 metrics_dict[dataset_name][metric_name] = compute_metric(
                     metric_name,
                     predictions=texts_gen,
                     references=texts_trg,
-                    sources=texts_src
+                    sources=texts_src,
+                    lang=lang,
                 )
 
         ## Metrics Logging

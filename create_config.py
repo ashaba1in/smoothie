@@ -207,12 +207,12 @@ def create_datasets_config(args):
             "tracked_metric": "bert-score",
         },
         "iwslt14": {
-            "metrics": ["bleu"],
-            "tracked_metric": "bleu",
+            "metrics": ["sacrebleu", "bleu"],
+            "tracked_metric": "sacrebleu",
         },
         "wmt14": {
-            "metrics": ["bleu"],
-            "tracked_metric": "bleu",
+            "metrics": ["sacrebleu", "bleu"],
+            "tracked_metric": "sacrebleu",
         },
     }
     return config

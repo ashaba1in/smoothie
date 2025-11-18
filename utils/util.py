@@ -238,6 +238,7 @@ def parse():
         "--encoder_name", type=str, default='bert-base-cased',
         choices=[
             "bert-base-cased",
+            "bert-base-german-cased",
             "bert-large-cased",
             "google-t5/t5-base",
             "gpt2",
