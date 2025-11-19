@@ -472,7 +472,7 @@ class DiffusionRunner:
     def train_step(self, batch):
         self.step += 1
 
-        with torch.autocast(device_type='cuda', dtype=torch.float16):
+        with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
             with torch.no_grad():
                 batch = batch.to(f"cuda:{dist.get_rank()}")
 
@@ -570,7 +570,7 @@ class DiffusionRunner:
             else:
                 model_input = x_t
             # model prediction
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
                 model_output = self.ddp_score_estimator(
                     x_t=model_input, time_t=timesteps, cond=src_x,
                     cond_mask=batch.get("attention_mask_src"),
@@ -767,7 +767,7 @@ class DiffusionRunner:
             else:
                 model_input = x_t
 
-            with torch.autocast(device_type='cuda', dtype=torch.float16), torch.no_grad():
+            with torch.autocast(device_type='cuda', dtype=torch.bfloat16), torch.no_grad():
                 model_output = self.ddp_score_estimator(
                     x_t=model_input, time_t=t, cond=cond_x,
                     attention_mask=mask,
@@ -787,7 +787,7 @@ class DiffusionRunner:
         else:
             model_input = x_t
         # model prediction
-        with torch.autocast(device_type='cuda', dtype=torch.float16):
+        with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
             model_output = self.ddp_score_estimator(
                 x_t=model_input, time_t=t, cond=cond_x,
                 attention_mask=mask, 
@@ -880,7 +880,7 @@ class DiffusionRunner:
         if attention_mask is not None:
             attention_mask = attention_mask.cuda()
 
-        with torch.amp.autocast('cuda', dtype=torch.float16):
+        with torch.amp.autocast('cuda', dtype=torch.bfloat16):
             pred_embeddings = self.pred_embeddings(
                 batch_size=batch_size,
                 attention_mask=attention_mask,

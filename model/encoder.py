@@ -40,7 +40,6 @@ class Encoder(torch.nn.Module):
         self.register_buffer("embeddings", embeddings)
 
     def forward(self, input_ids):
-        print(self.embeddings.device)
         return self.embeddings[input_ids]
 
     @staticmethod

@@ -224,6 +224,5 @@ def compute_sacrebleu(predictions, references, lang):
     tokenize = "intl" if lang == "de" else "13a"
 
     res = str(corpus_bleu(generations, [references], tokenize=tokenize))
-    print(res)
     bleu = float(res.split()[2])
     return bleu
