@@ -55,7 +55,7 @@ class DiffusionRunner:
             encoder_name,
             emb_statistics_agg_type=config.emb_statistics_agg_type,
             t5_encoder=config.model.t5_encoder
-        ).eval().cuda()
+        ).cuda()
         if config.is_conditional:
             if config.model.src_encoder_name is not None:
                 self.src_tokenizer = AutoTokenizer.from_pretrained(config.model.src_encoder_name)
@@ -63,7 +63,7 @@ class DiffusionRunner:
                     config.model.src_encoder_name,
                     emb_statistics_agg_type=config.emb_statistics_agg_type,
                     t5_encoder=config.model.t5_encoder
-                ).eval().cuda()
+                ).cuda()
             else:
                 self.src_tokenizer = self.tokenizer
                 self.src_encoder = self.encoder
@@ -820,7 +820,7 @@ class DiffusionRunner:
             x_small_t = self.dynamic.marginal(clean_x, small_t)['x_t']
 
             model_input = torch.softmax(x_small_t, dim=-1) @ self.encoder.embeddings
-            logits = self.encoder.embeddings @ model_input
+            logits = model_input @ self.encoder.embeddings.T
             decoder_nll = F.cross_entropy(
                 logits.view(-1, logits.shape[-1]),
                 batch['input_ids_trg'].view(-1)
