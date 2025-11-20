@@ -179,6 +179,7 @@ def convert_to_simplex(input_embeddings, sigma_0, embeddings):
     return result.view(*input_shape)
 
 
+@torch.no_grad()
 def convert_to_tess_simplex(token_ids, simplex_value, vocab_size):
     return 2 * simplex_value * F.one_hot(token_ids, vocab_size).float() - simplex_value
 
@@ -272,6 +273,9 @@ def parse():
     )
     parser.add_argument(
         "--predict_tokens", action='store_true', help='If set, predict logits instead of embeddings'
+    )
+    parser.add_argument(
+        "--train_embeddings", action='store_true', help='If set, train embeddings with the model'
     )
     parser.add_argument(
         "--clamp", action='store_true', help='If set, use clamping at generation'

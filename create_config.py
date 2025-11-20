@@ -22,6 +22,7 @@ def create_config(args):
     training.checkpoints_folder = os.path.join(config.work_dir, "checkpoints")
     training.checkpoint_name = ""
     training.x_0_variance = args.x_0_variance
+    training.train_embeddings = args.train_embeddings
 
     optim = config.optim = ml_collections.ConfigDict()
     optim.grad_clip_norm = 1.

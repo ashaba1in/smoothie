@@ -292,8 +292,12 @@ class DiffusionRunner:
         ema.restore(score_model.parameters())
 
     def set_optimizer(self) -> None:
+        trainable_parameters = list(self.score_estimator.parameters())
+        if self.config.training.train_embeddings:
+            trainable_parameters += [self.encoder.embeddings]
+
         optimizer = torch.optim.AdamW(
-            self.score_estimator.parameters(),
+            trainable_parameters,
             lr=self.config.optim.lr,
             weight_decay=self.config.optim.weight_decay,
             betas=(self.config.optim.beta_1, self.config.optim.beta_2),
@@ -762,8 +766,7 @@ class DiffusionRunner:
         x_0_self_cond = torch.zeros_like(target, dtype=target.dtype)
         if self.config.use_self_cond and random.random() > 0.5:
             if self.config.smooth_diffusion or self.config.tess_diffusion:
-                with torch.no_grad():
-                    model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
             else:
                 model_input = x_t
 
@@ -782,8 +785,7 @@ class DiffusionRunner:
                     x_0_self_cond = model_output
 
         if self.config.smooth_diffusion or self.config.tess_diffusion:
-            with torch.no_grad():
-                model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
+            model_input = torch.softmax(x_t, dim=-1) @ self.encoder.embeddings
         else:
             model_input = x_t
         # model prediction
@@ -803,6 +805,30 @@ class DiffusionRunner:
         else:
             loss_x_0 = mse_loss(target, model_output)
         loss = loss + loss_x_0
+
+        if self.config.training.train_embeddings:
+            assert self.config.smooth_diffusion
+            # x_T LOSS
+            tT = t.fill_(self.dynamic.T)
+            x_T_mean = self.dynamic.marginal_params(tT)['mu'] * clean_x
+
+            model_input = torch.softmax(x_T_mean, dim=-1) @ self.encoder.embeddings
+            tT_loss = torch.mean((model_input - model_input.detach().mean(dim=(0, 1), keepdims=True))**2)
+
+            # x_eps NLL LOSS
+            small_t = self.sample_time(batch_size, eps=eps) * 0.05
+            x_small_t = self.dynamic.marginal(clean_x, small_t)['x_t']
+
+            model_input = torch.softmax(x_small_t, dim=-1) @ self.encoder.embeddings
+            logits = self.encoder.embeddings @ model_input
+            decoder_nll = F.cross_entropy(
+                logits.view(-1, logits.shape[-1]),
+                batch['input_ids_trg'].view(-1)
+            )
+
+            loss = loss + decoder_nll + tT_loss
+            loss_dict['decoder_nll'] = decoder_nll
+            loss_dict['tT_loss'] = tT_loss
 
         loss_dict['loss_x_0'] = loss_x_0
         loss_dict['total_loss'] = loss
